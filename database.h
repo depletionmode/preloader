@@ -8,7 +8,7 @@
 
 typedef struct database {
   sqlite3 *db;
-  int target_idx;
+  int target_id;
 } DATABASE;
 
 DATABASE *database_init();			/* opens or creates sqlite database */

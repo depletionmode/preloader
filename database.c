@@ -8,6 +8,7 @@
 /* this code is not threadsafe! */
 
 static sqlite3_stmt *stmt;
+#define SQL_QUERY_PTR stmt
 #define SQL_QUERY_EXEC(X,Y,...)                         \
           do {                                          \
             char query[1000];                           \
@@ -114,9 +115,9 @@ char *database_add_file(DATABASE *db, char *path)
   free( buf );
 
   /* check if target already present in db */
-  int exists = 0;
   SQL_QUERY_EXEC( db->db, "SELECT * FROM targets WHERE hash='%s';", sha1 );
-  SQL_QUERY_WHILE_ROW exists = 1; /* target exists */
+  SQL_QUERY_WHILE_ROW
+    db->target_id = sqlite3_column_int( stmt2, 0 ); /* target exists */
   SQL_QUERY_END();
 
   if( !exists ) { /* target is new, so add to db */
