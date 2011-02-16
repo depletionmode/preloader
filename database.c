@@ -8,17 +8,34 @@ static void _create( DATABASE *db ) {
   char *queries[] = {
       "CREATE TABLE targets ("              \
       "  id INT NOT NULL AUTO_INCREMENT,"   \
-      "  file_hash TEXT,"                   \
+      "  hash TEXT,"                        \
+      "  name TEXT,"                        \
+      "  PRIMARY KEY (id)"                  \
+      ");",
+      "CREATE TABLE symbols ("              \
+      "  id INT NOT NULL AUTO_INCREMENT,"   \
+      "  symbol TEXT,"                      \
+      "  PRIMARY KEY (id)"                  \
+      ");",
+      "CREATE TABLE symbol_link ("          \
+      "  id INT NOT NULL AUTO_INCREMENT,"   \
+      "  target_id INT,"                    \
+      "  symbol_id INT,"                    \
+      "  PRIMARY KEY (id)"                  \
+      ");",
+      "CREATE TABLE signatures ("           \
+      "  id INT NULL AUTO_INCREMENT,"       \
+      "  signature TEXT,"                   \
       "  PRIMARY KEY (id)"                  \
       ");",
       NULL
   };
 
-  char *query_ptr = *queries;
+  char *ptr = *queries;
 
-  while( query_ptr ) {
-    sqlite3_exec( db->db, query_ptr, NULL, 0, NULL );
-    query_ptr++;
+  while( ptr ) {
+    sqlite3_exec( db->db, ptr, NULL, 0, NULL );
+    ptr++;
   }
 }
 
