@@ -117,7 +117,7 @@ char *database_add_file(DATABASE *db, char *path)
   /* check if target already present in db */
   SQL_QUERY_EXEC( db->db, "SELECT * FROM targets WHERE hash='%s';", sha1 );
   SQL_QUERY_WHILE_ROW
-    db->target_id = sqlite3_column_int( stmt2, 0 ); /* target exists */
+    db->target_id = sqlite3_column_int( SQL_QUERY_PTR, 0 ); /* target exists */
   SQL_QUERY_END();
 
   if( !exists ) { /* target is new, so add to db */
