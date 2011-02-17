@@ -1,7 +1,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <openssl/sha1.h>
+#include <fcntl.h>
+#include <string.h>
+
+#include <openssl/sha.h>
 
 #include "database.h"
 
@@ -12,7 +15,7 @@ static sqlite3_stmt *stmt;
 #define SQL_QUERY_EXEC(X,Y,...)                         \
           do {                                          \
             char query[1000];                           \
-            snprintf( query, 1000, Y, __VAR_ARGS__ );   \
+            snprintf( query, 1000, Y, ##__VA_ARGS__ );  \
             sqlite3_prepare( X, query, -1, &stmt, 0 );  \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                             \
@@ -104,8 +107,8 @@ char *database_add_file(DATABASE *db, char *path)
   fclose( f );
 
   /* calc sha1 hash */
-  static char sha1[SHA_DIGEST_LENGTH + 1];
-  memset( sha1, 0, sizeof( sha1 ) );
+  unsigned char sha1[SHA_DIGEST_LENGTH];
+  memset( sha1, 0, SHA_DIGEST_LENGTH );
 
   SHA_CTX c;
   SHA1_Init( &c );
@@ -114,16 +117,20 @@ char *database_add_file(DATABASE *db, char *path)
 
   free( buf );
 
+  static char sha1_asc[SHA_DIGEST_LENGTH * 2 + 1];
+  int i;
+  for( i = 0; i < SHA_DIGEST_LENGTH; i++ ) sprintf( sha1_asc + i * 2, "%02X", (unsigned int)sha1[i] );
+
   /* check if target already present in db */
   SQL_QUERY_EXEC( db->db, "SELECT * FROM targets WHERE hash='%s';", sha1 );
   SQL_QUERY_WHILE_ROW
     db->target_id = sqlite3_column_int( SQL_QUERY_PTR, 0 ); /* target exists */
   SQL_QUERY_END();
 
-  if( !exists ) { /* target is new, so add to db */
+  if( !db->target_id ) { /* target is new, so add to db */
     SQL_QUERY_EXEC( db->db, "INSERT INTO targets VALUES ('%s');", sha1 );
     SQL_QUERY_END();
   }
 
-  return sha1;
+  return sha1_asc;
 }
