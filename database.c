@@ -10,18 +10,18 @@
 
 /* this code is not threadsafe! */
 
-static sqlite3_stmt *stmt;
-#define SQL_QUERY_PTR stmt
-#define SQL_QUERY_EXEC(X,Y,...)                         \
-          do {                                          \
-            char query[1000];                           \
-            snprintf( query, 1000, Y, ##__VA_ARGS__ );  \
-            sqlite3_prepare( X, query, -1, &stmt, 0 );  \
+static sqlite3_stmt *_Zstmt;
+#define SQL_QUERY_PTR _Zstmt
+#define SQL_QUERY_EXEC(X,Y,...)                           \
+          do {                                            \
+            char query[1000];                             \
+            snprintf( query, 1000, Y, ##__VA_ARGS__ );    \
+            sqlite3_prepare( X, query, -1, &_Zstmt, 0 );  \
           } while( 0 )
-#define SQL_QUERY_WHILE_ROW                             \
-          while( sqlite3_step( stmt ) == SQLITE_ROW )
-#define SQL_QUERY_END()                                 \
-          sqlite3_finalize( stmt )
+#define SQL_QUERY_WHILE_ROW                               \
+          while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
+#define SQL_QUERY_END()                                   \
+          sqlite3_finalize( _Zstmt )
 
 static void _create( DATABASE *db ) {
   char *queries[] = {
