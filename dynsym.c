@@ -36,7 +36,7 @@ DYNSYM *get_dynsyms(int fd) {
       for( i = 0; i < num_syms; i++ ) {
         gelf_getsym( d, i, &sym );
 
-        if( ELF64_ST_TYPE( sym.st_info ) == 2 ) {
+        if( ELF32_ST_TYPE( sym.st_info ) == 2 ) { /* also good for 64-bit */
           DYNSYM *n_ds = calloc( 1, sizeof( DYNSYM ) );
 
           char *name = elf_strptr( e, shdr.sh_link, sym.st_name );
