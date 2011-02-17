@@ -134,17 +134,17 @@ char *database_add_file(DATABASE *db, char *path)
 
   free( buf );
 
-  static char sha1_asc[SHA_DIGEST_LENGTH * 2 + 1];
+  static char sha1_str[SHA_DIGEST_LENGTH * 2 + 1];
   for( int i = 0; i < SHA_DIGEST_LENGTH; i++ )
-    sprintf( sha1_asc + i * 2, "%02X", (unsigned int)sha1[i] );
+    sprintf( sha1_str + i * 2, "%02X", (unsigned int)sha1[i] );
 
-  if( (  db->target_id = _getid( db, "targets", "hash", sha1_asc ) ) < 0 ) {
+  if( (  db->target_id = _getid( db, "targets", "hash", sha1_str ) ) < 0 ) {
     /* target is new, so add to db */
-    SQL_QUERY_EXEC( db->db, "INSERT INTO targets VALUES ('%s');", sha1_asc );
+    SQL_QUERY_EXEC( db->db, "INSERT INTO targets VALUES ('%s');", sha1_str );
     SQL_QUERY_END();
 
-    db->target_id = _getid( db, "targets", "hash", sha1_asc );
+    db->target_id = _getid( db, "targets", "hash", sha1_str );
   }
 
-  return sha1_asc;
+  return sha1_str;
 }
