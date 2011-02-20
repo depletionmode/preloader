@@ -26,26 +26,22 @@ static sqlite3_stmt *_Zstmt;
 static void _create( DATABASE *db ) {
   char *queries[] = {
       "CREATE TABLE targets ("              \
-      "  id INT NOT NULL AUTO_INCREMENT,"   \
+      "  id INTEGER PRIMARY KEY,"           \
       "  hash TEXT,"                        \
-      "  name TEXT,"                        \
-      "  PRIMARY KEY (id)"                  \
+      "  name TEXT"                         \
       ");",
       "CREATE TABLE symbols ("              \
-      "  id INT NOT NULL AUTO_INCREMENT,"   \
-      "  symbol TEXT,"                      \
-      "  PRIMARY KEY (id)"                  \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  symbol TEXT"                       \
       ");",
       "CREATE TABLE symbol_link ("          \
-      "  id INT NOT NULL AUTO_INCREMENT,"   \
-      "  target_id INT,"                    \
-      "  symbol_id INT,"                    \
-      "  PRIMARY KEY (id)"                  \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  target_id INTEGER,"                \
+      "  symbol_id INTEGER"                 \
       ");",
       "CREATE TABLE signatures ("           \
-      "  id INT NULL AUTO_INCREMENT,"       \
-      "  signature TEXT,"                   \
-      "  PRIMARY KEY (id)"                  \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  signature TEXT"                    \
       ");",
       NULL
   };
@@ -143,7 +139,7 @@ char *database_add_file(DATABASE *db, char *path)
     SQL_QUERY_EXEC( db->db, "INSERT INTO targets VALUES ('%s');", sha1_str );
     SQL_QUERY_END();
 
-    db->target_id = _getid( db, "targets", "hash", sha1_str );
+    db->target_id = sqlite3_last_insert_rowid( db->db );
   }
 
   return sha1_str;
