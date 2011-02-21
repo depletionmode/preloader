@@ -47,12 +47,11 @@ static void _init_display(DISPLAY *d)
   init_pair( 3, COLOR_GREEN, bg_color );
   init_pair( 4, COLOR_RED, bg_color );
   init_pair( 5, COLOR_YELLOW, bg_color );
-  init_pair( 6, COLOR_BLACK, COLOR_GREEN );
-  init_pair( 7, COLOR_BLUE, bg_color );
+  init_pair( 6, COLOR_WHITE, COLOR_GREEN );
+  init_pair( 7, COLOR_WHITE, COLOR_RED );
   init_pair( 8, COLOR_WHITE, COLOR_BLUE );
 
   clear();
-  getmaxyx( stdscr, d->rows, d->cols );
 }
 
 static void _destroy_display()
@@ -63,7 +62,35 @@ static void _destroy_display()
 
 static void _draw_display(DISPLAY *d)
 {
+  int i, pos_x = 0, pos_y = 0;
+
+  getmaxyx( stdscr, d->rows, d->cols );
+
   clear();
+
+  /* draw title */
+  attron( COLOR_PAIR( 6 ) );
+  attron( A_BOLD );
+  char title[] = "-= ldpreloader by 2of1 =-";
+  printw( "  %s", title );
+  for( i = 0; i < d->cols - pos_x - strlen( title ) - 2; i++ ) printw( " " );
+  attroff( A_BOLD );
+  attroff( COLOR_PAIR( 6 ) );
+  pos_y++;
+
+  //move( pos_y, 0 );
+
+  /* draw status bar */
+  move( d->rows - 1, 0 );
+  attron( COLOR_PAIR( 8 ) );
+  attron( A_BOLD );
+  char txt[] = "";
+  printw( "  %s", txt );
+  for( i = 0; i < d->cols - pos_x - strlen( txt ) - 2; i++ ) printw( " " );
+  attroff( A_BOLD );
+  attroff( COLOR_PAIR( 8 ) );
+
+  refresh();
 }
 
 static void _parse_input(DISPLAY *d)
@@ -74,7 +101,7 @@ static void _parse_input(DISPLAY *d)
 int main(int ac, char *av[])
 {
   /* test code */
-  int fd = open( av[1], O_RDONLY );
+  /*int fd = open( av[1], O_RDONLY );
 
   DYNSYM *ds = get_dynsyms( fd );
 
@@ -85,7 +112,7 @@ int main(int ac, char *av[])
       ds = ds->nxt;
   }
 
-  free_dynsyms( ds );
+  free_dynsyms( ds );*/
 
   /* add target to DB */
   /* get dynamic symbols */
@@ -97,9 +124,13 @@ int main(int ac, char *av[])
   DISPLAY d;
   memset( &d, 0, sizeof( d ) );
 
+  d.running = 1;
+
   _init_display( &d );
 
   while( d.running ) {
+    usleep(1000);
+
     _draw_display( &d );
     _parse_input( &d );
   }
