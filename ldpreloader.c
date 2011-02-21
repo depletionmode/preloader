@@ -25,8 +25,8 @@
   } while( 0 )
 
 typedef struct symbol_list {
-  char *func;             /* ordered list of function names, NULL term */
-  char *params;           /* ordered list of sets of function params, NULL term */
+  char **func;            /* ordered list of function names, NULL term */
+  char **sig;             /* ordered list of sets of function params, NULL term */
   int display_offset,     /* current item as top of list to display */
       selected_offset;    /* the current selected item */
 } SYMBOL_LIST;
@@ -39,9 +39,12 @@ typedef struct display {
   SYMBOL_LIST symbols;
 } DISPLAY;
 
-static void _populate_symbol_list(SYMBOL_LIST *sl)
+static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
-  /* pull */
+  memset( sl, 0, sizeof( SYMBOL_LIST ) );
+
+  sl->func = database_get_symbols( db );
+  sl->sig = database_get_sigs( db );
 }
 
 static void _init_display(DISPLAY *d)
@@ -117,15 +120,22 @@ static void _draw_display(DISPLAY *d)
   pos_y = 2;
   int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
   for( i = 0; i < list_rows; i ++ ) {
+    char *ptr = d->symbols.func[d->symbols.display_offset + i];
+    if( !ptr ) break;
+
     move( pos_y, 2 );
-    if (i == 5)attron( COLOR_PAIR( 1 ) ); else
-    attron( COLOR_PAIR( 2 ) );
+
+    if (i == d->symbols.selected_offset) attron( COLOR_PAIR( 1 ) );
+    else attron( COLOR_PAIR( 2 ) );
+
     attron( A_BOLD );
-    printw( "* snprintf " );
+    printw( "%c %s ", '*', ptr );
     attroff( A_BOLD );
+
     printw( "(char *, int n, char *, ...)" );
-    if (i == 5)attroff( COLOR_PAIR( 1 ) ); else
-    attroff( COLOR_PAIR( 2 ) );
+
+    if (i == d->symbols.selected_offset) attroff( COLOR_PAIR( 1 ) );
+    else attroff( COLOR_PAIR( 2 ) );
 
     pos_y++;
   }
@@ -154,22 +164,27 @@ static void _parse_input(DISPLAY *d)
 int main(int ac, char *av[])
 {
   /* test code */
+
+  DATABASE *db = database_init();
+  database_add_target( db, av[1] ); /* add target to db */
+
+  /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
   DYNSYM *ds = get_dynsyms( fd );
   close( fd );
 
-  DATABASE *db = database_init();
-  database_add_target( db, av[1] );
-
+  /* add symbols to db */
   while( ds ) {
     database_add_symbol( db, ds->name );
-    printf( "%s\n", ds->name );
     ds = ds->nxt;
   }
 
-  database_kill( db );
-
   free_dynsyms( ds );
+
+  DISPLAY d;
+  memset( &d, 0, sizeof( d ) );
+
+  _populate_symbol_list( db, &d.symbols );
 
   /* add target to DB */
   /* get dynamic symbols */
@@ -177,9 +192,6 @@ int main(int ac, char *av[])
   /* (auto-resolve sigs and add to DB) */
   /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
   /* allow for selection of symbols */
-/*
-  DISPLAY d;
-  memset( &d, 0, sizeof( d ) );
 
   d.running = 1;
 
@@ -193,6 +205,24 @@ int main(int ac, char *av[])
   }
 
   _destroy_display();
-*/
+
+  database_kill( db );
+
+  /* free symbol list */
+  char **ptr = d.symbols.func;
+  if( ptr )
+    while( *ptr ) {
+      N_FREE( *ptr );
+      ptr++;
+    }
+  N_FREE( d.symbols.func );
+  ptr = d.symbols.sig;
+  if( ptr )
+    while( *ptr ) {
+      N_FREE( *ptr );
+      ptr++;
+    }
+  N_FREE( d.symbols.sig );
+
   return 0;
 }

@@ -231,19 +231,29 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
   return sqlite3_last_insert_rowid( db->db );
 }
 
-char *database_get_fcns(DATABASE *db)
-{/*
+char **database_get_symbols(DATABASE *db)
+{
+  char **list = calloc(1, sizeof( char * ) );
+
+  int rows = 0;
   SQL_QUERY_EXEC( db->db,
-                  "SELECT symbols.symbol FROM symbols, sym_link WHERE sym_link.='%s';",
-                  table,
-                  where,
-                  match );
-  SQL_QUERY_WHILE_ROW
-    id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
-  SQL_QUERY_END();*/
+                  "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d;",
+                  db->target_id );
+  SQL_QUERY_WHILE_ROW {
+    printf("%s\n", sqlite3_column_text( SQL_QUERY_PTR, 0 ));
+    rows++;
+    list = realloc( list, ( rows + 1 ) * sizeof( char * ) );
+    char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
+    strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
+    list[rows - 1] = entry;
+    list[rows] = NULL;
+  }
+  SQL_QUERY_END();
+
+  return list;
 }
 
-char *database_get_sigs(DATABASE *db)
+char **database_get_sigs(DATABASE *db)
 {
-
+  return NULL;
 }
