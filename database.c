@@ -237,7 +237,7 @@ char **database_get_symbols(DATABASE *db)
 
   int rows = 0;
   SQL_QUERY_EXEC( db->db,
-                  "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d;",
+                  "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d ORDER BY symbols.symbol;",
                   db->target_id );
   SQL_QUERY_WHILE_ROW {
     printf("%s\n", sqlite3_column_text( SQL_QUERY_PTR, 0 ));

@@ -32,6 +32,7 @@ typedef struct symbol_list {
 } SYMBOL_LIST;
 
 typedef struct display {
+  char *filename;         /* target filename */
   int rows,
       cols;
   int running,
@@ -102,7 +103,7 @@ static void _draw_display(DISPLAY *d)
   /* XX symbols (YY unresolved) */
   move( d->rows - 1, 0 );
   attron( COLOR_PAIR( 8 ) );
-  strcpy( buf, "  filename.x86" );
+  sprintf( buf, "  %s", d->filename );
   attron( A_BOLD );
   printw( "%s", buf );
   attroff( A_BOLD );
@@ -193,6 +194,7 @@ int main(int ac, char *av[])
   /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
   /* allow for selection of symbols */
 
+  d.filename = av[1];
   d.running = 1;
 
   _init_display( &d );
