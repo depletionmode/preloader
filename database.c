@@ -46,6 +46,7 @@ static void _create( DATABASE *db ) {
       ");",
       "CREATE TABLE signatures ("           \
       "  id INTEGER PRIMARY KEY,"           \
+      "  function TEXT,"                    \
       "  signature TEXT"                    \
       ");",
       NULL
@@ -152,21 +153,32 @@ char *database_add_file(DATABASE *db, char *path)
 
 int database_add_fcn_sig(DATABASE *db, char *sig)
 {
-    // TODO: verify sig for format
+  // TODO: verify sig for format
 
-    if( !db->target_id )
-        return 0;
+  /* find function by reading until '(' */
+  char *fcn = calloc( 1, strcspn( sig, "(" ) + 1 );
 
-    if( _getid( db, "signatures", "signature", sig ) )
-        return 0;
+  if( !db->target_id )
+    return 0;
 
-    SQL_QUERY_EXEC( db->db, "INSERT INTO signatures VALUES ('%s');", sig );
-    SQL_QUERY_END();
+  if( _getid( db, "signatures", "signature", sig ) )
+    return 0;
 
-    int sig_id = sqlite3_last_insert_rowid( db->db );
+  SQL_QUERY_EXEC( db->db,
+                  "INSERT INTO signatures VALUES ('%s', %s);",
+                  fcn,
+                  sig );
+  SQL_QUERY_END();
 
-    SQL_QUERY_EXEC( db->db, "INSERT INTO sig_link VALUES ('%d', '%d');", db->target_id, sig_id );
-    SQL_QUERY_END();
+  int sig_id = sqlite3_last_insert_rowid( db->db );
 
-    return sqlite3_last_insert_rowid( db->db );
+  SQL_QUERY_EXEC( db->db,
+                  "INSERT INTO sig_link VALUES ('%d', '%d');",
+                  db->target_id,
+                  sig_id );
+  SQL_QUERY_END();
+
+  free( fcn );
+
+  return sqlite3_last_insert_rowid( db->db );
 }
