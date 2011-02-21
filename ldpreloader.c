@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <ncurses.h>
 #include <string.h>
 
@@ -22,11 +23,19 @@
     exit( X );  \
   } while( 0 )
 
+typedef struct symbol_list {
+  char *func;             /* ordered list of function names, NULL term */
+  char *params;           /* ordered list of sets of function params, NULL term */
+  int display_offset,     /* current item as top of list to display */
+      selected_offset;    /* the current selected item */
+} SYMBOL_LIST;
+
 typedef struct display {
   int rows,
       cols;
   int running,
       show_error;
+  SYMBOL_LIST symbols;
 } DISPLAY;
 
 static void _init_display(DISPLAY *d)
@@ -43,7 +52,7 @@ static void _init_display(DISPLAY *d)
   if( use_default_colors() == OK )
     bg_color = -1;
 
-  init_pair( 1, COLOR_CYAN, bg_color );
+  init_pair( 1, COLOR_BLACK, COLOR_WHITE );
   init_pair( 2, COLOR_WHITE, bg_color );
   init_pair( 3, COLOR_GREEN, bg_color );
   init_pair( 4, COLOR_RED, bg_color );
@@ -80,8 +89,6 @@ static void _draw_display(DISPLAY *d)
   attroff( COLOR_PAIR( 6 ) );
   pos_y++;
 
-  //move( pos_y, 0 );
-
   /* draw status bar */
   /* XX symbols (YY unresolved) */
   move( d->rows - 1, 0 );
@@ -97,12 +104,45 @@ static void _draw_display(DISPLAY *d)
   for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
   attroff( COLOR_PAIR( 8 ) );
 
+  /* draw symbols */
+  /* work out number of rows we have for list */
+  /* print from list item ptr to end of list or num free rows (item ptr is moved up and down by up/down arrow) */
+  /* format: *_if_selected function_name_bold(sig...normal) */
+  pos_y = 2;
+  int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
+  for( i = 0; i < list_rows; i ++ ) {
+    move( pos_y, 2 );
+    if (i == 5)attron( COLOR_PAIR( 1 ) ); else
+    attron( COLOR_PAIR( 2 ) );
+    attron( A_BOLD );
+    printw( "* snprintf " );
+    attroff( A_BOLD );
+    printw( "(char *, int n, char *, ...)" );
+    if (i == 5)attroff( COLOR_PAIR( 1 ) ); else
+    attroff( COLOR_PAIR( 2 ) );
+
+    pos_y++;
+  }
+
   refresh();
 }
 
 static void _parse_input(DISPLAY *d)
 {
+  char c = getch();
 
+  switch( c ) {
+  case 0xd: // ???
+    /* edit symbol (sig +/ code? */
+    break;
+  case 0x20:
+    /* select symbol for ld_preloading */
+    break;
+  case 'q':
+    _destroy_display();
+    exit( EXIT_SUCCESS );
+    break;
+  }
 }
 
 int main(int ac, char *av[])
