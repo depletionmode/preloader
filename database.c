@@ -46,9 +46,7 @@ static void _create( DATABASE *db ) {
       ");",
       "CREATE TABLE signatures ("           \
       "  id INTEGER PRIMARY KEY,"           \
-      "  function TEXT,"                    \
-      "  signature TEXT,"                   \
-      "  resolved INT"                      \
+      "  signature TEXT"                    \
       ");",
       NULL
   };
@@ -156,36 +154,30 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
 {
   // TODO: verify sig for format
 
-  /* find function by reading until '(' */
+  /* find function (symbol) by reading until '(' */
   char *fcn = calloc( 1, strcspn( sig, "(" ) + 1 );
 
   if( !db->target_id )
     return 0;
 
-  int sig_id;
+  int symbol_id;
+  if( !( symbol_id = _getid( db, "symbols", "symbol", fcn ) ) )
+    return 0; /* no such symobl */
 
-  if( !( sig_id = _getid( db, "signatures", "function", fcn ) ) ) { /* add sig */
+  int sig_id;
+  if( !( sig_id = _getid( db, "signatures", "signature", sig ) ) ) {
+    /* add sig */
     SQL_QUERY_EXEC( db->db,
-                    "INSERT INTO signatures VALUES ('%s', '%s', '%d');",
-                    fcn,
-                    sig,
-                    sig ? 1 : 0 );
+                    "INSERT INTO signatures VALUES ('%s');", sig );
     SQL_QUERY_END();
 
     sig_id = sqlite3_last_insert_rowid( db->db );
-  } else {  /* update sig */
-    SQL_QUERY_EXEC( db->db,
-                    "UPDATE signatures SET signature='%s', resolved='%d' WHERE function='%s'",
-                    sig,
-                    sig ? 1 : 0,
-                    fcn );
-    SQL_QUERY_END();
   }
 
-  /* link sig to target */
+  /* link sig to symbol */
   SQL_QUERY_EXEC( db->db,
                   "INSERT INTO sig_link VALUES ('%d', '%d');",
-                  db->target_id,
+                  symbol_id,
                   sig_id );
   SQL_QUERY_END();
 
