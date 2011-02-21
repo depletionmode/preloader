@@ -17,6 +17,7 @@ static sqlite3_stmt *_Zstmt;
             char query[1000];                             \
             snprintf( query, 1000, Y, ##__VA_ARGS__ );    \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );  \
+            /* DEBUG */ printf("SQL DEBUG: %s\n", query); \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -27,8 +28,7 @@ static void _create( DATABASE *db ) {
   char *queries[] = {
       "CREATE TABLE targets ("              \
       "  id INTEGER PRIMARY KEY,"           \
-      "  hash TEXT,"                        \
-      "  name TEXT"                         \
+      "  hash TEXT"                        \
       ");",
       "CREATE TABLE symbols ("              \
       "  id INTEGER PRIMARY KEY,"           \
@@ -51,10 +51,10 @@ static void _create( DATABASE *db ) {
       NULL
   };
 
-  char *ptr = *queries;
+  char **ptr = queries;
 
-  while( ptr ) {
-    sqlite3_exec( db->db, ptr, NULL, 0, NULL );
+  while( *ptr ) {
+    sqlite3_exec( db->db, *ptr, NULL, 0, NULL );
     ptr++;
   }
 }
@@ -73,6 +73,8 @@ static int _getid( DATABASE *db, char *table, char *where, char *match )
     id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
   SQL_QUERY_END();
 
+  printf("ID: %d\n", id);
+
   return id;
 }
 
@@ -81,8 +83,11 @@ DATABASE *database_init()
   DATABASE *db = calloc( 1, sizeof( DATABASE ) );
 
   /* open db or create it */
-  if( sqlite3_open( DATABASE_PATH, &db->db ) !=  SQLITE_OK) {
-    fprintf( stderr, "error opening/creating DB: %s",
+  char path[500];
+  sprintf( path, "%s/%s", getenv("HOME"), DATABASE_PATH );
+  if( sqlite3_open( path, &db->db ) !=  SQLITE_OK) {
+    fprintf( stderr, "error opening/creating DB (%s): %s!\n",
+             path,
              sqlite3_errmsg( db->db ) );
 
     exit( EXIT_FAILURE );
@@ -104,13 +109,13 @@ void database_kill(DATABASE *db)
   free( db );
 }
 
-char *database_add_file(DATABASE *db, char *path)
+char *database_add_target(DATABASE *db, char *path)
 {
   FILE *f;
 
   /* open target */
-  if( ( f = fopen( path, O_RDONLY ) ) < 0 ) {
-    fprintf( stderr, "error opening target" );
+  if( ( f = fopen( path, "rb" ) ) < 0 ) {
+    fprintf( stderr, "error opening target!\n" );
     exit( EXIT_FAILURE );
   }
 
@@ -141,10 +146,13 @@ char *database_add_file(DATABASE *db, char *path)
 
   if( (  db->target_id = _getid( db, "targets", "hash", sha1_str ) ) < 0 ) {
     /* target is new, so add to db */
-    SQL_QUERY_EXEC( db->db, "INSERT INTO targets VALUES ('%s');", sha1_str );
+    SQL_QUERY_EXEC( db->db, "INSERT INTO targets ('hash') VALUES ('%s');", sha1_str );
+    SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
 
     db->target_id = sqlite3_last_insert_rowid( db->db );
+
+    printf("ID: %d\n", db->target_id);
   }
 
   return sha1_str;
@@ -169,6 +177,7 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
     /* add sig */
     SQL_QUERY_EXEC( db->db,
                     "INSERT INTO signatures VALUES ('%s');", sig );
+    SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
 
     sig_id = sqlite3_last_insert_rowid( db->db );
@@ -179,9 +188,27 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
                   "INSERT INTO sig_link VALUES ('%d', '%d');",
                   symbol_id,
                   sig_id );
+  SQL_QUERY_WHILE_ROW;
   SQL_QUERY_END();
 
   free( fcn );
 
   return sqlite3_last_insert_rowid( db->db );
+}
+
+char *database_get_fcns(DATABASE *db)
+{/*
+  SQL_QUERY_EXEC( db->db,
+                  "SELECT symbols.symbol FROM symbols, sym_link WHERE sym_link.='%s';",
+                  table,
+                  where,
+                  match );
+  SQL_QUERY_WHILE_ROW
+    id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
+  SQL_QUERY_END();*/
+}
+
+char *database_get_sigs(DATABASE *db)
+{
+
 }
