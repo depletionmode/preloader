@@ -25,7 +25,8 @@
 typedef struct display {
   int rows,
       cols;
-  int running;
+  int running,
+      show_error;
 } DISPLAY;
 
 static void _init_display(DISPLAY *d)
@@ -62,7 +63,8 @@ static void _destroy_display()
 
 static void _draw_display(DISPLAY *d)
 {
-  int i, pos_x = 0, pos_y = 0;
+  char buf[1024];
+  int i, len, pos_x = 0, pos_y = 0;
 
   getmaxyx( stdscr, d->rows, d->cols );
 
@@ -71,9 +73,9 @@ static void _draw_display(DISPLAY *d)
   /* draw title */
   attron( COLOR_PAIR( 6 ) );
   attron( A_BOLD );
-  char title[] = "-= ldpreloader by 2of1 =-";
-  printw( "  %s", title );
-  for( i = 0; i < d->cols - pos_x - strlen( title ) - 2; i++ ) printw( " " );
+  strcpy( buf, "  -= ldpreloader by 2of1 =-" );
+  printw( "%s", buf );
+  for( i = 0; i < d->cols - pos_x - strlen( buf ); i++ ) printw( " " );
   attroff( A_BOLD );
   attroff( COLOR_PAIR( 6 ) );
   pos_y++;
@@ -81,13 +83,18 @@ static void _draw_display(DISPLAY *d)
   //move( pos_y, 0 );
 
   /* draw status bar */
+  /* XX symbols (YY unresolved) */
   move( d->rows - 1, 0 );
   attron( COLOR_PAIR( 8 ) );
+  strcpy( buf, "  filename.x86" );
   attron( A_BOLD );
-  char txt[] = "";
-  printw( "  %s", txt );
-  for( i = 0; i < d->cols - pos_x - strlen( txt ) - 2; i++ ) printw( " " );
+  printw( "%s", buf );
   attroff( A_BOLD );
+  len = strlen( buf );
+  sprintf( buf, "  [%d symbols, %d unresolved]", 10, 7 );
+  printw( "%s", buf );
+  len += strlen( buf );
+  for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
   attroff( COLOR_PAIR( 8 ) );
 
   refresh();
