@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <string.h>
 
 #include "dynsym.h"
 
@@ -24,9 +25,10 @@
 typedef struct display {
   int rows,
       cols;
+  int running;
 } DISPLAY;
 
-void _init_display(DISPLAY *d)
+static void _init_display(DISPLAY *d)
 {
   initscr();
   cbreak();
@@ -53,10 +55,20 @@ void _init_display(DISPLAY *d)
   getmaxyx( stdscr, d->rows, d->cols );
 }
 
-void _destroy_display(DISPLAY *d)
+static void _destroy_display()
 {
   clear();
   endwin();
+}
+
+static void _draw_display(DISPLAY *d)
+{
+  clear();
+}
+
+static void _parse_input(DISPLAY *d)
+{
+
 }
 
 int main(int ac, char *av[])
@@ -81,6 +93,18 @@ int main(int ac, char *av[])
   /* (auto-resolve sigs and add to DB) */
   /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
   /* allow for selection of symbols */
+
+  DISPLAY d;
+  memset( &d, 0, sizeof( d ) );
+
+  _init_display( &d );
+
+  while( d.running ) {
+    _draw_display( &d );
+    _parse_input( &d );
+  }
+
+  _destroy_display();
 
   return 0;
 }
