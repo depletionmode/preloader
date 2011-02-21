@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "dynsym.h"
+#include "database.h"
 
 #define N_FREE(X) \
   do {            \
@@ -37,6 +38,11 @@ typedef struct display {
       show_error;
   SYMBOL_LIST symbols;
 } DISPLAY;
+
+static void _populate_symbol_list(SYMBOL_LIST *sl)
+{
+  /* pull */
+}
 
 static void _init_display(DISPLAY *d)
 {
@@ -148,18 +154,22 @@ static void _parse_input(DISPLAY *d)
 int main(int ac, char *av[])
 {
   /* test code */
-  /*int fd = open( av[1], O_RDONLY );
-
+  int fd = open( av[1], O_RDONLY );
   DYNSYM *ds = get_dynsyms( fd );
-
   close( fd );
 
+  DATABASE *db = database_init();
+  database_add_target( db, av[1] );
+
   while( ds ) {
-      printf( "%s\n", ds->name );
-      ds = ds->nxt;
+    database_add_symbol( db, ds->name );
+    printf( "%s\n", ds->name );
+    ds = ds->nxt;
   }
 
-  free_dynsyms( ds );*/
+  database_kill( db );
+
+  free_dynsyms( ds );
 
   /* add target to DB */
   /* get dynamic symbols */
@@ -167,7 +177,7 @@ int main(int ac, char *av[])
   /* (auto-resolve sigs and add to DB) */
   /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
   /* allow for selection of symbols */
-
+/*
   DISPLAY d;
   memset( &d, 0, sizeof( d ) );
 
@@ -183,6 +193,6 @@ int main(int ac, char *av[])
   }
 
   _destroy_display();
-
+*/
   return 0;
 }
