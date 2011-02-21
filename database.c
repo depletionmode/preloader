@@ -47,7 +47,8 @@ static void _create( DATABASE *db ) {
       "CREATE TABLE signatures ("           \
       "  id INTEGER PRIMARY KEY,"           \
       "  function TEXT,"                    \
-      "  signature TEXT"                    \
+      "  signature TEXT,"                   \
+      "  resolved INT"                      \
       ");",
       NULL
   };
@@ -161,17 +162,27 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
   if( !db->target_id )
     return 0;
 
-  if( _getid( db, "signatures", "signature", sig ) )
-    return 0;
+  int sig_id;
 
-  SQL_QUERY_EXEC( db->db,
-                  "INSERT INTO signatures VALUES ('%s', %s);",
-                  fcn,
-                  sig );
-  SQL_QUERY_END();
+  if( !( sig_id = _getid( db, "signatures", "function", fcn ) ) ) { /* add sig */
+    SQL_QUERY_EXEC( db->db,
+                    "INSERT INTO signatures VALUES ('%s', '%s', '%d');",
+                    fcn,
+                    sig,
+                    sig ? 1 : 0 );
+    SQL_QUERY_END();
 
-  int sig_id = sqlite3_last_insert_rowid( db->db );
+    sig_id = sqlite3_last_insert_rowid( db->db );
+  } else {  /* update sig */
+    SQL_QUERY_EXEC( db->db,
+                    "UPDATE signatures SET signature='%s', resolved='%d' WHERE function='%s'",
+                    sig,
+                    sig ? 1 : 0,
+                    fcn );
+    SQL_QUERY_END();
+  }
 
+  /* link sig to target */
   SQL_QUERY_EXEC( db->db,
                   "INSERT INTO sig_link VALUES ('%d', '%d');",
                   db->target_id,
