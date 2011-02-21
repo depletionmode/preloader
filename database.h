@@ -15,7 +15,8 @@ DATABASE *database_init();			/* opens or creates sqlite database */
 void database_kill(DATABASE *db);	/* destroys db obj */
 
 char *database_add_target(DATABASE *db, char *path);  /* add a target, ret sha1 hash */
-int database_add_fcn_sig(DATABASE *db, char *sig);  /* add a fcn sig */
+int database_add_symbol(DATABASE *db, char *sym);     /* add a symbol */
+int database_add_fcn_sig(DATABASE *db, char *sig);    /* add a fcn sig */
 
 char *database_get_fcns(DATABASE *db);    /* get NULL term list of symbols */
 char *database_get_sigs(DATABASE *db);    /* get NULL term list of signatures */

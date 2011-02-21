@@ -145,7 +145,7 @@ char *database_add_target(DATABASE *db, char *path)
     sprintf( sha1_str + i * 2, "%02X", (unsigned int)sha1[i] );
 
   if( (  db->target_id = _getid( db, "targets", "hash", sha1_str ) ) < 0 ) {
-    /* target is new, so add to db */
+    /* new target, so add to db */
     SQL_QUERY_EXEC( db->db, "INSERT INTO targets ('hash') VALUES ('%s');", sha1_str );
     SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
@@ -156,6 +156,27 @@ char *database_add_target(DATABASE *db, char *path)
   }
 
   return sha1_str;
+}
+
+int database_add_symbol(DATABASE *db, char *sym)
+{
+  int symbol_id;
+
+  if( !( symbol_id = _getid( db, "symbols", "symbol", sym ) ) ) {
+    /* new symbol, so add to db */
+    SQL_QUERY_EXEC( db->db, "INSERT INTO symbols ('symbol') VALUES ('%s');", sym);
+    SQL_QUERY_WHILE_ROW;
+    SQL_QUERY_END();
+
+    symbol_id = sqlite3_last_insert_rowid( db->db );
+  }
+
+  /* link symbols and target */
+  SQL_QUERY_EXEC( db->db, "INSERT INTO sym_link ('target_id','symbol_id') VALUES ('%s','%s');", db->target_id, symbol_id);
+  SQL_QUERY_WHILE_ROW;
+  SQL_QUERY_END();
+
+  return symbol_id;
 }
 
 int database_add_fcn_sig(DATABASE *db, char *sig)
