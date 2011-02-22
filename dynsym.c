@@ -41,7 +41,7 @@ DYNSYM *get_dynsyms(int fd) {
 
           char *name = elf_strptr( e, shdr.sh_link, sym.st_name );
 
-          n_ds->name = malloc( strlen( name ) );
+          n_ds->name = malloc( strlen( name ) + 1 );
           strcpy( n_ds->name, name );
 
           if( !f_ds ) f_ds = n_ds;
