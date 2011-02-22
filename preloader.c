@@ -24,6 +24,12 @@
     exit( X );  \
   } while( 0 )
 
+enum {
+  STATE_NORMAL,
+  STATE_NOTIFICATION,
+  STATE_PROCESSING
+};
+
 typedef struct symbol_list {
   char **func;            /* ordered list of function names */
   char **sig;             /* ordered list of sets of function params */
@@ -31,7 +37,7 @@ typedef struct symbol_list {
   int display_offset,     /* current item as top of list to display */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
-      unresolved;         /* number of unresolved symbols */
+      resolved;           /* number of unresolved symbols */
 } SYMBOL_LIST;
 
 typedef struct display {
@@ -41,6 +47,8 @@ typedef struct display {
   int running,
       show_error;
   SYMBOL_LIST symbols;
+  int state;
+  void *extra;
 } DISPLAY;
 
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
@@ -48,7 +56,7 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
 
   sl->func = database_get_symbols( db, &sl->count );
-  sl->sig = database_get_sigs( db );
+  sl->sig = database_get_sigs( db, &sl->resolved );
   sl->selected = calloc( 1, sl->count * sizeof( int ) );
 }
 
@@ -115,37 +123,63 @@ static void _draw_display(DISPLAY *d)
   sprintf( buf,
            "  [%d symbols, %d unresolved]",
            d->symbols.count,
-           d->symbols.unresolved );
+           d->symbols.count - d->symbols.resolved );
   printw( "%s", buf );
   len += strlen( buf );
   for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
   attroff( COLOR_PAIR( 8 ) );
 
-  /* draw symbols */
-  /* work out number of rows we have for list */
-  /* print from list item ptr to end of list or num free rows (item ptr is moved up and down by up/down arrow) */
-  /* format: *_if_selected function_name_bold(sig...normal) */
-  pos_y = 2;
-  int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
-  for( i = 0; i < list_rows; i ++ ) {
-    if( d->symbols.display_offset + i == d->symbols.count) break;
+  switch( d->state ) {
+  case STATE_NORMAL:
+  {
+    /* draw symbols */
+    /* work out number of rows we have for list */
+    /* print from list item ptr to end of list or num free rows (item ptr is moved up and down by up/down arrow) */
+    /* format: *_if_selected function_name_bold(sig...normal) */
+    pos_y = 2;
+    int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
+    for( i = 0; i < list_rows; i ++ ) {
+      if( d->symbols.display_offset + i == d->symbols.count) break;
 
-    move( pos_y, 2 );
+      move( pos_y, 2 );
 
-    if (i == d->symbols.selected_offset + d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
-    else attron( COLOR_PAIR( 2 ) );
+      if (i == d->symbols.selected_offset + d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
+      else attron( COLOR_PAIR( 2 ) );
 
+      attron( A_BOLD );
+      printw( "%c %s ", d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ', d->symbols.func[d->symbols.display_offset + i] );
+      attroff( A_BOLD );
+
+      if( d->symbols.sig[d->symbols.display_offset + i] )
+        printw( "%s", d->symbols.sig[d->symbols.display_offset + i] );
+
+      if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
+      else attroff( COLOR_PAIR( 2 ) );
+
+      pos_y++;
+    }
+    break;
+  }
+  case STATE_PROCESSING:
+  {
+    static char swirl[] = "|/-\\";
+    static char *c = swirl;
+
+    move( 2, 2 );
+    attron( COLOR_PAIR( 2 ) );
     attron( A_BOLD );
-    printw( "%c %s ", d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ', d->symbols.func[d->symbols.display_offset + i] );
+
+    if( *(++c) == '\0' ) c = swirl;
+    printw( "%c Processing... please be patient...", *c );
+
     attroff( A_BOLD );
 
-    if( d->symbols.sig[d->symbols.display_offset + i] )
-      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] );
+    printw( " (%s)", (char *)d->extra );
 
-    if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
-    else attroff( COLOR_PAIR( 2 ) );
+    attroff( COLOR_PAIR( 2 ) );
 
-    pos_y++;
+    break;
+  }
   }
 
   refresh();
@@ -169,6 +203,7 @@ static void _parse_input(DISPLAY *d)
     break;
   case 0x20:  /* space */
     /* select symbol for ld_preloading */
+    // TODO: check for sig
     d->symbols.selected[d->symbols.selected_offset] ^= 1;
     break;
   case 'q':
@@ -180,10 +215,16 @@ static void _parse_input(DISPLAY *d)
 
 int main(int ac, char *av[])
 {
-  /* test code */
+  DISPLAY d;
+  memset( &d, 0, sizeof( d ) );
+
+  d.filename = av[1];
+
+  _init_display( &d );
+  d.state = STATE_PROCESSING;
 
   DATABASE *db = database_init();
-  database_add_target( db, av[1] ); /* add target to db */
+  database_add_target( db, d.filename ); /* add target to db */
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
@@ -192,14 +233,13 @@ int main(int ac, char *av[])
 
   /* add symbols to db */
   while( ds ) {
+    d.extra = ds->name;
+    _draw_display( &d );
     database_add_symbol( db, ds->name );
     ds = ds->nxt;
   }
 
   free_dynsyms( ds );
-
-  DISPLAY d;
-  memset( &d, 0, sizeof( d ) );
 
   _populate_symbol_list( db, &d.symbols );
 
@@ -210,10 +250,8 @@ int main(int ac, char *av[])
   /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
   /* allow for selection of symbols */
 
-  d.filename = av[1];
+  d.state = STATE_NORMAL;
   d.running = 1;
-
-  _init_display( &d );
 
   while( d.running ) {
     usleep(1000);

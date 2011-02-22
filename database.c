@@ -23,7 +23,7 @@ static sqlite3_stmt *_Zstmt;
             char query[1000];                             \
             snprintf( query, 1000, Y, ##__VA_ARGS__ );    \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );  \
-            /* DEBUG */ printf("SQL DEBUG: %s\n", query); \
+            /* DEBUG  printf("SQL DEBUG: %s\n", query); */\
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -79,7 +79,7 @@ static int _getid( DATABASE *db, char *table, char *where, char *match )
     id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
   SQL_QUERY_END();
 
-  printf("ID: %d\n", id);
+  //printf("ID: %d\n", id);
 
   return id;
 }
@@ -158,7 +158,7 @@ char *database_add_target(DATABASE *db, char *path)
 
     db->target_id = sqlite3_last_insert_rowid( db->db );
 
-    printf("ID: %d\n", db->target_id);
+    //printf("ID: %d\n", db->target_id);
   }
 
   return sha1_str;
@@ -252,12 +252,14 @@ char **database_get_symbols(DATABASE *db, int *count)
   return list;
 }
 
-char **database_get_sigs(DATABASE *db)
+char **database_get_sigs(DATABASE *db, int *resolved)
 {
   int count;
   char **ptr = database_get_symbols( db, &count );
 
   char **list = calloc(1, count * sizeof( char * ) );
+
+  *resolved = 0;
 
   int symbol = 0;
   for( int i = 0; i < count; i++ ) {
@@ -269,6 +271,7 @@ char **database_get_sigs(DATABASE *db)
                     "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d;",
                     symbol_id );
     SQL_QUERY_WHILE_ROW {
+      (*resolved)++;
       entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
       strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
       list[symbol] = entry;
