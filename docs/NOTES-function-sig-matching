@@ -1,4 +1,5 @@
 thoughts on online matching rules (not in order):
+- find function name
 - whitespaces stipped until first character
 - if just function name, look on previous line for return type
 - return type must be in return type list or defaults to int (errors??)
