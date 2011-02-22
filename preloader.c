@@ -28,7 +28,9 @@ typedef struct symbol_list {
   char **func;            /* ordered list of function names, NULL term */
   char **sig;             /* ordered list of sets of function params, NULL term */
   int display_offset,     /* current item as top of list to display */
-      selected_offset;    /* the current selected item */
+      selected_offset,    /* the current selected item */
+      count,              /* number of symbols */
+      unresolved;         /* number of unresolved symbols */
 } SYMBOL_LIST;
 
 typedef struct display {
@@ -46,6 +48,13 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 
   sl->func = database_get_symbols( db );
   sl->sig = database_get_sigs( db );
+
+  char **ptr = sl->func;
+  if( ptr )
+    while( *ptr ) {
+      sl->count++;
+      ptr++;
+    }
 }
 
 static void _init_display(DISPLAY *d)
@@ -108,7 +117,7 @@ static void _draw_display(DISPLAY *d)
   printw( "%s", buf );
   attroff( A_BOLD );
   len = strlen( buf );
-  sprintf( buf, "  [%d symbols, %d unresolved]", 10, 7 );
+  sprintf( buf, "  [%d symbols, %d unresolved]", d->symbols.count, 7 );
   printw( "%s", buf );
   len += strlen( buf );
   for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
@@ -126,7 +135,7 @@ static void _draw_display(DISPLAY *d)
 
     move( pos_y, 2 );
 
-    if (i == d->symbols.selected_offset) attron( COLOR_PAIR( 1 ) );
+    if (i == d->symbols.selected_offset + d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
     else attron( COLOR_PAIR( 2 ) );
 
     attron( A_BOLD );
@@ -135,7 +144,7 @@ static void _draw_display(DISPLAY *d)
 
     printw( "(char *, int n, char *, ...)" );
 
-    if (i == d->symbols.selected_offset) attroff( COLOR_PAIR( 1 ) );
+    if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
     else attroff( COLOR_PAIR( 2 ) );
 
     pos_y++;
@@ -146,13 +155,21 @@ static void _draw_display(DISPLAY *d)
 
 static void _parse_input(DISPLAY *d)
 {
-  char c = getch();
+  int c = getch();
 
   switch( c ) {
-  case 0xd: // ???
-    /* edit symbol (sig +/ code? */
+  case KEY_UP:
+    if( !d->symbols.selected_offset-- )
+      d->symbols.selected_offset = 0;
     break;
-  case 0x20:
+  case KEY_DOWN:
+    if( ++d->symbols.selected_offset == d->symbols.count )
+      d->symbols.selected_offset = d->symbols.count - 1;
+    break;
+  case 0xd: // ???
+    /* edit symbol (sig +/ code?) */
+    break;
+  case 0x20:  /* space */
     /* select symbol for ld_preloading */
     break;
   case 'q':
