@@ -4,7 +4,7 @@
 
 #include <sqlite3.h>
 
-#define DATABASE_PATH ".ldpreloader.db"
+#define DATABASE_PATH ".preloader-db"
 
 typedef struct database {
   sqlite3 *db;

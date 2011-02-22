@@ -92,7 +92,7 @@ static void _draw_display(DISPLAY *d)
   /* draw title */
   attron( COLOR_PAIR( 6 ) );
   attron( A_BOLD );
-  strcpy( buf, "  -= ldpreloader by 2of1 =-" );
+  strcpy( buf, "  -= preloader by 2of1 =-" );
   printw( "%s", buf );
   for( i = 0; i < d->cols - pos_x - strlen( buf ); i++ ) printw( " " );
   attroff( A_BOLD );
