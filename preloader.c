@@ -232,11 +232,12 @@ int main(int ac, char *av[])
   close( fd );
 
   /* add symbols to db */
-  while( ds ) {
-    d.extra = ds->name;
+  DYNSYM *p_ds = ds;
+  while( p_ds ) {
+    d.extra = p_ds->name;
     _draw_display( &d );
-    database_add_symbol( db, ds->name );
-    ds = ds->nxt;
+    database_add_symbol( db, p_ds->name );
+    p_ds = p_ds->nxt;
   }
 
   free_dynsyms( ds );
