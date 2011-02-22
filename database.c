@@ -231,22 +231,21 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
   return sqlite3_last_insert_rowid( db->db );
 }
 
-char **database_get_symbols(DATABASE *db)
+char **database_get_symbols(DATABASE *db, int *count)
 {
   char **list = calloc(1, sizeof( char * ) );
 
-  int rows = 0;
+  *count = 0;
   SQL_QUERY_EXEC( db->db,
                   "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d ORDER BY symbols.symbol;",
                   db->target_id );
   SQL_QUERY_WHILE_ROW {
-    printf("%s\n", sqlite3_column_text( SQL_QUERY_PTR, 0 ));
-    rows++;
-    list = realloc( list, ( rows + 1 ) * sizeof( char * ) );
+    printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
+    (*count)++;
+    list = realloc( list, *count * sizeof( char * ) );
     char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
     strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
-    list[rows - 1] = entry;
-    list[rows] = NULL;
+    list[*count - 1] = entry;
   }
   SQL_QUERY_END();
 
@@ -255,5 +254,30 @@ char **database_get_symbols(DATABASE *db)
 
 char **database_get_sigs(DATABASE *db)
 {
-  return NULL;
+  int count;
+  char **ptr = database_get_symbols( db, &count );
+
+  char **list = calloc(1, count * sizeof( char * ) );
+
+  int symbol = 0;
+  for( int i = 0; i < count; i++ ) {
+    char *entry;
+
+    int symbol_id = _getid( db, "symbols", "symbol", *ptr );
+
+    SQL_QUERY_EXEC( db->db,
+                    "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d;",
+                    symbol_id );
+    SQL_QUERY_WHILE_ROW {
+      entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
+      strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
+      list[symbol] = entry;
+    }
+    SQL_QUERY_END();
+
+    ptr++;
+    symbol++;
+  }
+
+  return list;
 }

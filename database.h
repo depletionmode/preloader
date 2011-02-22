@@ -18,7 +18,7 @@ char *database_add_target(DATABASE *db, char *path);  /* add a target, ret sha1 
 int database_add_symbol(DATABASE *db, char *sym);     /* add a symbol */
 int database_add_fcn_sig(DATABASE *db, char *sig);    /* add a fcn sig */
 
-char **database_get_symbols(DATABASE *db);    /* get NULL term list of symbols */
+char **database_get_symbols(DATABASE *db, int *count);    /* get NULL term list of symbols */
 char **database_get_sigs(DATABASE *db);    /* get NULL term list of signatures */
 
 #endif /* DATABASE_H_ */

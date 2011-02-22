@@ -46,15 +46,8 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
 
-  sl->func = database_get_symbols( db );
+  sl->func = database_get_symbols( db, &sl->count );
   sl->sig = database_get_sigs( db );
-
-  char **ptr = sl->func;
-  if( ptr )
-    while( *ptr ) {
-      sl->count++;
-      ptr++;
-    }
 }
 
 static void _init_display(DISPLAY *d)
@@ -117,7 +110,10 @@ static void _draw_display(DISPLAY *d)
   printw( "%s", buf );
   attroff( A_BOLD );
   len = strlen( buf );
-  sprintf( buf, "  [%d symbols, %d unresolved]", d->symbols.count, 7 );
+  sprintf( buf,
+           "  [%d symbols, %d unresolved]",
+           d->symbols.count,
+           d->symbols.unresolved );
   printw( "%s", buf );
   len += strlen( buf );
   for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
@@ -130,8 +126,7 @@ static void _draw_display(DISPLAY *d)
   pos_y = 2;
   int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
   for( i = 0; i < list_rows; i ++ ) {
-    char *ptr = d->symbols.func[d->symbols.display_offset + i];
-    if( !ptr ) break;
+    if( d->symbols.display_offset + i == d->symbols.count) break;
 
     move( pos_y, 2 );
 
@@ -139,7 +134,7 @@ static void _draw_display(DISPLAY *d)
     else attron( COLOR_PAIR( 2 ) );
 
     attron( A_BOLD );
-    printw( "%c %s ", '*', ptr );
+    printw( "%c %s ", '*', d->symbols.func[d->symbols.display_offset + i] );
     attroff( A_BOLD );
 
     printw( "(char *, int n, char *, ...)" );
@@ -174,7 +169,7 @@ static void _parse_input(DISPLAY *d)
     break;
   case 'q':
     _destroy_display();
-    exit( EXIT_SUCCESS );
+    d->running = 0;
     break;
   }
 }
@@ -228,20 +223,10 @@ int main(int ac, char *av[])
   database_kill( db );
 
   /* free symbol list */
-  char **ptr = d.symbols.func;
-  if( ptr )
-    while( *ptr ) {
-      N_FREE( *ptr );
-      ptr++;
-    }
-  N_FREE( d.symbols.func );
-  ptr = d.symbols.sig;
-  if( ptr )
-    while( *ptr ) {
-      N_FREE( *ptr );
-      ptr++;
-    }
-  N_FREE( d.symbols.sig );
+  for( int i = 0; i < d.symbols.count; i++ ) {
+    if( d.symbols.func ) N_FREE( d.symbols.func[i] );
+    if( d.symbols.sig ) N_FREE( d.symbols.sig[i] );
+  }
 
   return 0;
 }
