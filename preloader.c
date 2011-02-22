@@ -25,8 +25,9 @@
   } while( 0 )
 
 typedef struct symbol_list {
-  char **func;            /* ordered list of function names, NULL term */
-  char **sig;             /* ordered list of sets of function params, NULL term */
+  char **func;            /* ordered list of function names */
+  char **sig;             /* ordered list of sets of function params */
+  int *selected;          /* list of selected items */
   int display_offset,     /* current item as top of list to display */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
@@ -48,6 +49,7 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 
   sl->func = database_get_symbols( db, &sl->count );
   sl->sig = database_get_sigs( db );
+  sl->selected = calloc( 1, sl->count * sizeof( int ) );
 }
 
 static void _init_display(DISPLAY *d)
@@ -134,10 +136,11 @@ static void _draw_display(DISPLAY *d)
     else attron( COLOR_PAIR( 2 ) );
 
     attron( A_BOLD );
-    printw( "%c %s ", '*', d->symbols.func[d->symbols.display_offset + i] );
+    printw( "%c %s ", d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ', d->symbols.func[d->symbols.display_offset + i] );
     attroff( A_BOLD );
 
-    printw( "(char *, int n, char *, ...)" );
+    if( d->symbols.sig[d->symbols.display_offset + i] )
+      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] );
 
     if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
     else attroff( COLOR_PAIR( 2 ) );
@@ -166,6 +169,7 @@ static void _parse_input(DISPLAY *d)
     break;
   case 0x20:  /* space */
     /* select symbol for ld_preloading */
+    d->symbols.selected[d->symbols.selected_offset] ^= 1;
     break;
   case 'q':
     _destroy_display();
