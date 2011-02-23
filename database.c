@@ -193,19 +193,17 @@ int database_add_symbol(DATABASE *db, char *sym)
   return symbol_id;
 }
 
-int database_add_fcn_sig(DATABASE *db, char *sig)
+int database_add_fcn_sig(DATABASE *db, char *symbol, char *sig)
 {
   // TODO: verify sig for format
   // sig should already by nicely formed ( one elsewhere, this isn't the database code's responsibility)
-
-  /* find function (symbol) */
-  char *fcn = calloc( 1, strcspn( sig, "(" ) - strspn( sig, " " ) + 1 );
+  // format: (returntype)(type name, type name, type name) e.g. (void)(char* userKey, int len, AESKEY* aes);
 
   if( !db->target_id )
     return 0;
 
   int symbol_id;
-  if( !( symbol_id = _getid( db, "symbols", "symbol", fcn ) ) )
+  if( !( symbol_id = _getid( db, "symbols", "symbol", symbol ) ) )
     return 0; /* no such symobl */
 
   int sig_id;
@@ -226,8 +224,6 @@ int database_add_fcn_sig(DATABASE *db, char *sig)
                   sig_id );
   SQL_QUERY_WHILE_ROW;
   SQL_QUERY_END();
-
-  free( fcn );
 
   return sqlite3_last_insert_rowid( db->db );
 }
