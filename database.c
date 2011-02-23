@@ -196,9 +196,10 @@ int database_add_symbol(DATABASE *db, char *sym)
 int database_add_fcn_sig(DATABASE *db, char *sig)
 {
   // TODO: verify sig for format
+  // sig should already by nicely formed ( one elsewhere, this isn't the database code's responsibility)
 
-  /* find function (symbol) by reading until '(' */
-  char *fcn = calloc( 1, strcspn( sig, "(" ) + 1 );
+  /* find function (symbol) */
+  char *fcn = calloc( 1, strcspn( sig, "(" ) - strspn( sig, " " ) + 1 );
 
   if( !db->target_id )
     return 0;
