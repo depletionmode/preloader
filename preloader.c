@@ -51,22 +51,6 @@ typedef struct display {
   void *extra;
 } DISPLAY;
 
-static char *_get_fcn_type(char *sig)
-{
-  static char type[50];
-  memset( type, 0, sizeof( type ) );
-
-  int len = strcspn( sig, " " );
-  memcpy( type, sig, len );   /* this would be unsafe if no space is found in 49 chars... */
-
-  return type;
-}
-
-static char *_get_fcn_params(char *sig)
-{
-  return sig + strcspn( sig, "(" );
-}
-
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
@@ -172,8 +156,7 @@ static void _draw_display(DISPLAY *d)
       printw( "%s ", d->symbols.func[d->symbols.display_offset + i] );
       attroff( A_BOLD );
 
-      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? _get_fcn_type(d->symbols.sig[d->symbols.display_offset + i]) : "(int)" );
-      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? _get_fcn_params(d->symbols.sig[d->symbols.display_offset + i]) : "()" );
+      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? d->symbols.sig[d->symbols.display_offset + i] : "(int)()" );
 
       if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
       else attroff( COLOR_PAIR( 2 ) );
