@@ -1,0 +1,9 @@
+thoughts on online matching rules (not in order):
+- find function name
+- whitespaces stipped until first character
+- if just function name, look on previous line for return type
+- return type must be in return type list or defaults to int (errors??)
+- all whilespaces from function name onwards striped
+- function name is case sensitive, all the rest should be lower case
+- params list variable names must be stripped
+- read until closing bracket even if across multiple lines
