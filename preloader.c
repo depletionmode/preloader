@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "dynsym.h"
+#include "ldd.h"
 #include "database.h"
 
 #define N_FREE(X) \
@@ -223,6 +224,8 @@ int main(int ac, char *av[])
   memset( &d, 0, sizeof( d ) );
 
   d.filename = av[1];
+
+  //get_libs(d.filename);
 
   _init_display( &d );
   d.state = STATE_PROCESSING;
