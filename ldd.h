@@ -9,7 +9,7 @@ struct libs {
   LIBS *nxt;
 };
 
-LIBS *get_libs(int fd);
+LIBS *get_libs(char *path);
 void free_libs(LIBS *ds);
 
 #endif /* LDD_H_ */
