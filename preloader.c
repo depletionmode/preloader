@@ -120,7 +120,7 @@ static void _draw_display(DISPLAY *d)
   attroff( A_BOLD );
   len = strlen( buf );
   sprintf( buf,
-           "  [%d symbols, %d signatures]",
+           "  [%d symbols, %d sig maches]",
            d->symbols.count,
            d->symbols.no_sigs );
   printw( "%s", buf );
