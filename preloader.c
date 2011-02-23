@@ -37,7 +37,7 @@ typedef struct symbol_list {
   int display_offset,     /* current item as top of list to display */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
-      resolved;           /* number of unresolved symbols */
+      no_sigs;           /* number of found fcn sigs */
 } SYMBOL_LIST;
 
 typedef struct display {
@@ -56,7 +56,7 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
 
   sl->func = database_get_symbols( db, &sl->count );
-  sl->sig = database_get_sigs( db, &sl->resolved );
+  sl->sig = database_get_sigs( db, &sl->no_sigs );
   sl->selected = calloc( 1, sl->count * sizeof( int ) );
 }
 
@@ -112,7 +112,6 @@ static void _draw_display(DISPLAY *d)
   pos_y++;
 
   /* draw status bar */
-  /* XX symbols (YY unresolved) */
   move( d->rows - 1, 0 );
   attron( COLOR_PAIR( 8 ) );
   sprintf( buf, "  %s", d->filename );
@@ -121,9 +120,9 @@ static void _draw_display(DISPLAY *d)
   attroff( A_BOLD );
   len = strlen( buf );
   sprintf( buf,
-           "  [%d symbols, %d unresolved]",
+           "  [%d symbols, %d signatures]",
            d->symbols.count,
-           d->symbols.count - d->symbols.resolved );
+           d->symbols.no_sigs );
   printw( "%s", buf );
   len += strlen( buf );
   for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
@@ -242,6 +241,13 @@ int main(int ac, char *av[])
     d.extra = p_ds->name;
     _draw_display( &d );
     database_add_symbol( db, p_ds->name );
+    if( !strcmp( p_ds->name, "memcpy" ) ) database_add_sig( db, p_ds->name, "(void*)(void* destination, const void* source, size_t num)" );
+    if( !strcmp( p_ds->name, "atoi" ) ) database_add_sig( db, p_ds->name, "(int)(const char* str)" );
+    if( !strcmp( p_ds->name, "free" ) ) database_add_sig( db, p_ds->name, "(void)(void* ptr)" );
+    if( !strcmp( p_ds->name, "malloc" ) ) database_add_sig( db, p_ds->name, "(void*)(size_t size)" );
+    if( !strcmp( p_ds->name, "printf" ) ) database_add_sig( db, p_ds->name, "(int)(const char* format, ...)" );
+    if( !strcmp( p_ds->name, "putchar" ) ) database_add_sig( db, p_ds->name, "(int)(int character)" );
+    if( !strcmp( p_ds->name, "strlen" ) ) database_add_sig( db, p_ds->name, "(size_t)(const char* str)" );
     p_ds = p_ds->nxt;
   }
 

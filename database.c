@@ -21,9 +21,9 @@ static sqlite3_stmt *_Zstmt;
 #define SQL_QUERY_EXEC(X,Y,...)                           \
           do {                                            \
             char query[1000];                             \
-            snprintf( query, 1000, Y, ##__VA_ARGS__ );    \
+            snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );    \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );  \
-            /* DEBUG  printf("SQL DEBUG: %s\n", query); */\
+            /* DEBUG */  printf("SQL DEBUG: %s\n", query); \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -34,13 +34,13 @@ static void _create( DATABASE *db ) {
   char *queries[] = {
       "CREATE TABLE targets ("              \
       "  id INTEGER PRIMARY KEY,"           \
-      "  hash TEXT"                        \
+      "  hash TEXT"                         \
       ");",
       "CREATE TABLE symbols ("              \
       "  id INTEGER PRIMARY KEY,"           \
       "  symbol TEXT"                       \
       ");",
-      "CREATE TABLE sym_link ("          \
+      "CREATE TABLE sym_link ("             \
       "  id INTEGER PRIMARY KEY,"           \
       "  target_id INTEGER,"                \
       "  symbol_id INTEGER"                 \
@@ -48,7 +48,8 @@ static void _create( DATABASE *db ) {
       "CREATE TABLE sig_link ("             \
       "  id INTEGER PRIMARY KEY,"           \
       "  symbol_id INTEGER,"                \
-      "  sig_id INTEGER"                    \
+      "  sig_id INTEGER,"                   \
+      "  active INTEGER"                    \
       ");",
       "CREATE TABLE signatures ("           \
       "  id INTEGER PRIMARY KEY,"           \
@@ -193,7 +194,7 @@ int database_add_symbol(DATABASE *db, char *sym)
   return symbol_id;
 }
 
-int database_add_fcn_sig(DATABASE *db, char *symbol, char *sig)
+int database_add_sig(DATABASE *db, char *symbol, char *sig)
 {
   // TODO: verify sig for format
   // sig should already by nicely formed ( one elsewhere, this isn't the database code's responsibility)
@@ -210,20 +211,35 @@ int database_add_fcn_sig(DATABASE *db, char *symbol, char *sig)
   if( !( sig_id = _getid( db, "signatures", "signature", sig ) ) ) {
     /* add sig */
     SQL_QUERY_EXEC( db->db,
-                    "INSERT INTO signatures VALUES ('%s');", sig );
+                    "INSERT INTO signatures ('signature') VALUES ('%s');", sig );
     SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
 
     sig_id = sqlite3_last_insert_rowid( db->db );
   }
 
-  /* link sig to symbol */
-  SQL_QUERY_EXEC( db->db,
-                  "INSERT INTO sig_link VALUES ('%d', '%d');",
-                  symbol_id,
-                  sig_id );
-  SQL_QUERY_WHILE_ROW;
-  SQL_QUERY_END();
+  /* deactivate existing links */
+  if( !_getid( db, "sig_link", "sig_id", itoa( sig_id ) ) ) {
+    int sig_link_id;
+    if( ( sig_link_id = _getid( db, "sig_link", "symbol_id", itoa( symbol_id ) ) ) ) {
+      SQL_QUERY_EXEC( db->db,
+                      "UPDATE sig_link SET active=0 WHERE id=%s",
+                      itoa( sig_link_id ) );
+      SQL_QUERY_WHILE_ROW;
+      SQL_QUERY_END();
+    }
+
+    //haarat azharah;
+    //avisror
+
+    /* link sig to symbol */
+    SQL_QUERY_EXEC( db->db,
+                    "INSERT INTO sig_link ('symbol_id','sig_id','active') VALUES ('%d','%d',1);",
+                    symbol_id,
+                    sig_id );
+    SQL_QUERY_WHILE_ROW;
+    SQL_QUERY_END();
+  }
 
   return sqlite3_last_insert_rowid( db->db );
 }
@@ -240,7 +256,7 @@ char **database_get_symbols(DATABASE *db, int *count)
     printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
     (*count)++;
     list = realloc( list, *count * sizeof( char * ) );
-    char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
+    char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
     strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
     list[*count - 1] = entry;
   }
@@ -249,14 +265,14 @@ char **database_get_symbols(DATABASE *db, int *count)
   return list;
 }
 
-char **database_get_sigs(DATABASE *db, int *resolved)
+char **database_get_sigs(DATABASE *db, int *found)
 {
   int count;
   char **ptr = database_get_symbols( db, &count );
 
   char **list = calloc(1, count * sizeof( char * ) );
 
-  *resolved = 0;
+  *found = 0;
 
   int symbol = 0;
   for( int i = 0; i < count; i++ ) {
@@ -265,13 +281,14 @@ char **database_get_sigs(DATABASE *db, int *resolved)
     int symbol_id = _getid( db, "symbols", "symbol", *ptr );
 
     SQL_QUERY_EXEC( db->db,
-                    "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d;",
+                    "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d AND active=1;",
                     symbol_id );
     SQL_QUERY_WHILE_ROW {
-      (*resolved)++;
-      entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) );
+      (*found)++;
+      entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
       strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
       list[symbol] = entry;
+      break;
     }
     SQL_QUERY_END();
 
