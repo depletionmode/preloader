@@ -10,7 +10,7 @@ char *_get_name(char *buf, int *len)
   static char tmp[50];
   memset( tmp, 0, sizeof( tmp ) );
 
-  memcpy( tmp, buf, strcspn( buf, " " ) );
+  memcpy( tmp, buf + 1, strcspn( buf, " " ) - 1 );
 
   *len = strlen( tmp );
   return tmp;
@@ -31,15 +31,19 @@ LIBS *get_libs(char *path)
 {
   LIBS *f_l = NULL, *l = NULL;
 
-  if( !setenv( "LD_TRACE_LOADED_OBJECTS", 1, 1 ) )
-    return NULL;
-
-  FILE *pf = popen( path, "r" );
+  char cmd[200];
+  sprintf( cmd, "ldd %s", path);
+  FILE *pf = popen( cmd, "r" );
   if( !pf )
     return NULL;
 
   char buf[1000];
   while( fgets( buf, sizeof( buf ), pf ) ) {
+    if( strstr( buf, "linux-vdso" ) ||
+        strstr( buf, "linux-gate" ) ||
+        strstr( buf, "ld-linux" ) )
+      continue;
+
     LIBS *n_l = calloc( 1, sizeof( LIBS ) );
 
     int len;
