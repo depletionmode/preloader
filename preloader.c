@@ -273,6 +273,26 @@ static void _exec_target(char *target_path, char *params, char *lib_path)
   _init_display();
 }
 
+static void _list_scroll(DISPLAY *d, int direction, int inc)
+{
+#define SCROLL_UP 0
+#define SCROLL_DOWN 1
+
+  for( int i = 0; i < inc; i ++ ) {
+    if( direction == SCROLL_UP ) {
+      if( !d->symbols.selected_offset-- )
+        d->symbols.selected_offset = 0;
+      if( d->symbols.selected_offset ==  d->symbols.display_offset - 1 )
+        d->symbols.display_offset--;
+    } else {
+      if( ++d->symbols.selected_offset == d->symbols.count )
+        d->symbols.selected_offset = d->symbols.count - 1;
+      if( d->symbols.selected_offset >= d->rows - 4 + d->symbols.display_offset )
+        d->symbols.display_offset++;
+    }
+  }
+}
+
 static void _parse_input(DISPLAY *d)
 {
   static char *params = NULL;
@@ -280,16 +300,16 @@ static void _parse_input(DISPLAY *d)
 
   switch( c ) {
   case KEY_UP:
-    if( !d->symbols.selected_offset-- )
-      d->symbols.selected_offset = 0;
-    if( d->symbols.selected_offset ==  d->symbols.display_offset - 1 )
-      d->symbols.display_offset--;
+    _list_scroll( d, SCROLL_UP, 1 );
     break;
   case KEY_DOWN:
-    if( ++d->symbols.selected_offset == d->symbols.count )
-      d->symbols.selected_offset = d->symbols.count - 1;
-    if( d->symbols.selected_offset >= d->rows - 4 + d->symbols.display_offset )
-      d->symbols.display_offset++;
+    _list_scroll( d, SCROLL_DOWN, 1 );
+    break;
+  case KEY_NPAGE:
+    _list_scroll( d, SCROLL_DOWN, d->rows - 4 );
+    break;
+  case KEY_PPAGE:
+    _list_scroll( d, SCROLL_UP, d->rows - 4 );
     break;
   case 0xd: // ???
     /* edit symbol (sig +/ code?) */
