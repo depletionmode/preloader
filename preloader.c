@@ -113,8 +113,10 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
   attron( COLOR_PAIR( 2 ) );
 
   mvchgat( d->rows - 4, 2, -1, A_INVIS, 0, NULL );
+  move( d->rows - 3, 2 );
+  for( int i = 0; i < d->cols; i++ ) addch( ' ' );
   mvprintw( d->rows - 3, 2, "%s > ", str );
-
+//089719000
   attron( A_BOLD );
   curs_set( 2 );
 
@@ -164,7 +166,7 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
 static void _draw_display(DISPLAY *d)
 {
   char buf[1024];
-  int i, len, pos_x = 0, pos_y = 0;
+  int len, pos_x = 0, pos_y = 0;
 
   getmaxyx( stdscr, d->rows, d->cols );
 
@@ -175,7 +177,7 @@ static void _draw_display(DISPLAY *d)
   attron( A_BOLD );
   strcpy( buf, "  -= preloader by 2of1 =-" );
   printw( "%s", buf );
-  for( i = 0; i < d->cols - pos_x - strlen( buf ); i++ ) printw( " " );
+  for( int i = 0; i < d->cols - pos_x - strlen( buf ); i++ ) addch( ' ' );
   attroff( A_BOLD );
   attroff( COLOR_PAIR( 6 ) );
   pos_y++;
@@ -194,7 +196,7 @@ static void _draw_display(DISPLAY *d)
            d->symbols.no_sigs );
   printw( "%s", buf );
   len += strlen( buf );
-  for( i = 0; i < d->cols - pos_x - len; i++ ) printw( " " );
+  for( int i = 0; i < d->cols - pos_x - len; i++ ) addch( ' ' );;
   attroff( COLOR_PAIR( 8 ) );
 
   switch( d->state ) {
@@ -206,7 +208,7 @@ static void _draw_display(DISPLAY *d)
     /* format: *_if_selected function_name_bold(sig...normal) */
     pos_y = 2;
     int list_rows = d->rows - 1 /* top */ - 3 /* bottom */;
-    for( i = 0; i < list_rows; i ++ ) {
+    for( int i = 0; i < list_rows; i ++ ) {
       if( d->symbols.display_offset + i == d->symbols.count) break;
 
       move( pos_y, 2 );
@@ -235,6 +237,7 @@ static void _draw_display(DISPLAY *d)
   }
   case STATE_PROCESSING:
   {
+    static int symbol_count = 0;
     static char swirl[] = "|/-\\";
     static char *c = swirl;
 
@@ -243,7 +246,7 @@ static void _draw_display(DISPLAY *d)
     attron( A_BOLD );
 
     if( *(++c) == '\0' ) c = swirl;
-    printw( "%c Processing... please be patient...", *c );
+    printw( "%c Processing symbol %d, please be patient...", *c, ++symbol_count );
 
     attroff( A_BOLD );
 

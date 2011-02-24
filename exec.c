@@ -25,8 +25,6 @@ int exec_target(char *target_path, char *params, char *lib_path)
     return EXEC_EEXEC;
   }
 
-  fprintf(stderr,"DEBUG: params=%s\n", params);
-
-  /* parent process should disable ncurses before running this and re-enable it after */
+  /* parent process should disable ncurses screen before running this and re-enable it after */
   return 1;
 }
