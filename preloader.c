@@ -299,8 +299,7 @@ static void _parse_input(DISPLAY *d)
     params = _get_input( d, tmp, params );
   }
   case 'r':   /* execute with previous params */
-    _exec_target( "find", params, NULL );
-    //_exec_target( d->filename, d->params, NULL );
+    _exec_target( d->filename, params, NULL );
     break;
   case 'q':
     d->running = 0;
