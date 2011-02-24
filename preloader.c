@@ -116,7 +116,7 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
   move( d->rows - 3, 2 );
   for( int i = 0; i < d->cols; i++ ) addch( ' ' );
   mvprintw( d->rows - 3, 2, "%s > ", str );
-//089719000
+
   attron( A_BOLD );
   curs_set( 2 );
 
