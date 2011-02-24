@@ -25,6 +25,6 @@ int exec_target(char *target_path, char *params, char *lib_path)
     return EXEC_EEXEC;
   }
 
-  /* parent process should disable ncurses and wait for child to finish */
+  /* parent process should disable ncurses before running this and re-enable it after */
   return 1;
 }

@@ -8,6 +8,7 @@
 
 #include "dynsym.h"
 #include "ldd.h"
+#include "exec.h"
 #include "database.h"
 
 #define N_FREE(X) \
@@ -28,7 +29,8 @@
 enum {
   STATE_NORMAL,
   STATE_NOTIFICATION,
-  STATE_PROCESSING
+  STATE_PROCESSING,
+  STATE_INPUT
 };
 
 typedef struct symbol_list {
@@ -61,7 +63,7 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
   sl->selected = calloc( 1, sl->count * sizeof( int ) );
 }
 
-static void _init_display(DISPLAY *d)
+static void _init_display()
 {
   initscr();
   cbreak();
@@ -87,7 +89,7 @@ static void _init_display(DISPLAY *d)
   clear();
 }
 
-static void _destroy_display()
+static void _disable_display()
 {
   clear();
   endwin();
@@ -185,9 +187,25 @@ static void _draw_display(DISPLAY *d)
 
     break;
   }
+  case STATE_INPUT:
+  {
+    break;
+  }
   }
 
   refresh();
+}
+
+static void _exec_target(char *target_path, char *params, char *lib_path)
+{
+  _disable_display();
+
+  exec_target( target_path, params, lib_path );
+
+  fprintf( stderr,"\n\nPress enter to continue...\n" );
+  getchar();
+
+  _init_display();
 }
 
 static void _parse_input(DISPLAY *d)
@@ -211,8 +229,13 @@ static void _parse_input(DISPLAY *d)
     // TODO: check for sig
     d->symbols.selected[d->symbols.selected_offset] ^= 1;
     break;
+  case 'R':   /* enter params then execute */
+    // TODO accept params
+  case 'r':   /* execute with previous params */
+    _exec_target( "find", "/", NULL );
+    //_exec_target( d->filename, d->params, NULL );
+    break;
   case 'q':
-    _destroy_display();
     d->running = 0;
     break;
   }
@@ -225,9 +248,9 @@ int main(int ac, char *av[])
 
   d.filename = av[1];
 
-  //get_libs(d.filename);
+  //get_libs(d.filename); //TODO
 
-  _init_display( &d );
+  _init_display();
   d.state = STATE_PROCESSING;
 
   DATABASE *db = database_init();
@@ -275,7 +298,7 @@ int main(int ac, char *av[])
     _parse_input( &d );
   }
 
-  _destroy_display();
+  _disable_display();
 
   database_kill( db );
 
