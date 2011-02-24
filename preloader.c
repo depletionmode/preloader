@@ -29,8 +29,7 @@
 enum {
   STATE_NORMAL,
   STATE_NOTIFICATION,
-  STATE_PROCESSING,
-  STATE_INPUT
+  STATE_PROCESSING
 };
 
 typedef struct symbol_list {
@@ -53,6 +52,16 @@ typedef struct display {
   int state;
   void *extra;
 } DISPLAY;
+
+static char *_strip_path(char *file_path)
+{
+  char *ptr;
+
+  if( ( ptr = strrchr( file_path, '/' ) ) ) ptr++;
+  else ptr = file_path;
+
+  return ptr;
+}
 
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
@@ -93,6 +102,63 @@ static void _disable_display()
 {
   clear();
   endwin();
+}
+
+static char *_get_input(DISPLAY *d, char *str, char *dflt)
+{
+  static char in[1000];
+  char *ptr = in;
+
+  echo();
+  attron( COLOR_PAIR( 2 ) );
+
+  mvchgat( d->rows - 4, 2, -1, A_INVIS, 0, NULL );
+  mvprintw( d->rows - 3, 2, "%s > ", str );
+
+  attron( A_BOLD );
+  curs_set( 2 );
+
+  if( dflt ) {
+    strcpy( ptr, dflt );
+    printw( dflt );
+    ptr += strlen( ptr );
+  } else
+    memset( in, 0, sizeof( in ) );
+
+  int end = 0,
+      c = getch();
+  do {
+    refresh();
+
+    switch( c ) {
+    case KEY_BACKSPACE:
+    {
+      int r, c;
+      getyx( stdscr, r, c );
+      if( ptr > in ) {
+        addch(' ');
+        move( r, c );
+        ptr--;
+      } else
+        move( r, c + 1 );
+    }
+      break;
+    case '\n':
+      end = 1;
+      c = '\0';
+    default:
+      *(ptr++) = c;
+    }
+
+  } while ( !end && ( c = getch() ) );
+
+  curs_set( 0 );
+  attroff( A_BOLD );
+
+  attroff( COLOR_PAIR( 2 ) );
+  noecho();
+
+  return in;
 }
 
 static void _draw_display(DISPLAY *d)
@@ -139,7 +205,7 @@ static void _draw_display(DISPLAY *d)
     /* print from list item ptr to end of list or num free rows (item ptr is moved up and down by up/down arrow) */
     /* format: *_if_selected function_name_bold(sig...normal) */
     pos_y = 2;
-    int list_rows = d->rows - 2 /* top */ - 3 /* bottom */;
+    int list_rows = d->rows - 1 /* top */ - 3 /* bottom */;
     for( i = 0; i < list_rows; i ++ ) {
       if( d->symbols.display_offset + i == d->symbols.count) break;
 
@@ -187,10 +253,6 @@ static void _draw_display(DISPLAY *d)
 
     break;
   }
-  case STATE_INPUT:
-  {
-    break;
-  }
   }
 
   refresh();
@@ -210,6 +272,7 @@ static void _exec_target(char *target_path, char *params, char *lib_path)
 
 static void _parse_input(DISPLAY *d)
 {
+  static char *params = NULL;
   int c = getch();
 
   switch( c ) {
@@ -230,9 +293,13 @@ static void _parse_input(DISPLAY *d)
     d->symbols.selected[d->symbols.selected_offset] ^= 1;
     break;
   case 'R':   /* enter params then execute */
-    // TODO accept params
+  {
+    char tmp[300];
+    sprintf( tmp, "'%s' args", _strip_path( d->filename ) );
+    params = _get_input( d, tmp, params );
+  }
   case 'r':   /* execute with previous params */
-    _exec_target( "find", "/", NULL );
+    _exec_target( "find", params, NULL );
     //_exec_target( d->filename, d->params, NULL );
     break;
   case 'q':

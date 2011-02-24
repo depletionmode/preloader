@@ -11,7 +11,7 @@ int exec_target(char *target_path, char *params, char *lib_path)
   // TODO: check library path
 
   /* allow dynamic linker/loader to find wrapper code */
-  if( setenv( "LD_PRELOAD", lib_path, 1 ) < 0 ) {
+  if( lib_path && setenv( "LD_PRELOAD", lib_path, 1 ) < 0 ) {
     fprintf( stderr, "error: failed to set environment variable (LD_PRELOAD)!\n" );
     return EXEC_EENV;
   }
@@ -24,6 +24,8 @@ int exec_target(char *target_path, char *params, char *lib_path)
     fprintf( stderr, "error: failed to execute target (%s %s)!\n", target_path, params );
     return EXEC_EEXEC;
   }
+
+  fprintf(stderr,"DEBUG: params=%s\n", params);
 
   /* parent process should disable ncurses before running this and re-enable it after */
   return 1;
