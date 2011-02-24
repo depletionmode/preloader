@@ -219,7 +219,7 @@ static void _draw_display(DISPLAY *d)
       attroff( A_BOLD );
       attroff( COLOR_PAIR( 5 ) );
 
-      if (i == d->symbols.selected_offset + d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
+      if (i == d->symbols.selected_offset - d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
       else attron( COLOR_PAIR( 2 ) );
 
       attron( A_BOLD );
@@ -228,7 +228,7 @@ static void _draw_display(DISPLAY *d)
 
       printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? d->symbols.sig[d->symbols.display_offset + i] : "(int)()" );
 
-      if (i == d->symbols.selected_offset + d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
+      if (i == d->symbols.selected_offset - d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
       else attroff( COLOR_PAIR( 2 ) );
 
       pos_y++;
@@ -282,10 +282,14 @@ static void _parse_input(DISPLAY *d)
   case KEY_UP:
     if( !d->symbols.selected_offset-- )
       d->symbols.selected_offset = 0;
+    if( d->symbols.selected_offset ==  d->symbols.display_offset - 1 )
+      d->symbols.display_offset--;
     break;
   case KEY_DOWN:
     if( ++d->symbols.selected_offset == d->symbols.count )
       d->symbols.selected_offset = d->symbols.count - 1;
+    if( d->symbols.selected_offset >= d->rows - 4 + d->symbols.display_offset )
+      d->symbols.display_offset++;
     break;
   case 0xd: // ???
     /* edit symbol (sig +/ code?) */
