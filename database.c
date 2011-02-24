@@ -18,12 +18,12 @@ char *itoa(long i) {
 
 static sqlite3_stmt *_Zstmt;
 #define SQL_QUERY_PTR _Zstmt
-#define SQL_QUERY_EXEC(X,Y,...)                           \
-          do {                                            \
-            char query[1000];                             \
-            snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );    \
-            sqlite3_prepare( X, query, -1, &_Zstmt, 0 );  \
-            /* DEBUG */  printf("SQL DEBUG: %s\n", query); \
+#define SQL_QUERY_EXEC(X,Y,...)                                           \
+          do {                                                            \
+            char query[1000];                                             \
+            snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );     \
+            sqlite3_prepare( X, query, -1, &_Zstmt, 0 );                  \
+            /* DEBUG   printf("SQL DEBUG: %s\n", query); */               \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -253,7 +253,7 @@ char **database_get_symbols(DATABASE *db, int *count)
                   "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d ORDER BY symbols.symbol;",
                   db->target_id );
   SQL_QUERY_WHILE_ROW {
-    printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
+    //printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
     (*count)++;
     list = realloc( list, *count * sizeof( char * ) );
     char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );

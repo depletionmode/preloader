@@ -39,11 +39,11 @@ typedef struct symbol_list {
   int display_offset,     /* current item as top of list to display */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
-      no_sigs;           /* number of found fcn sigs */
+      no_sigs;            /* number of found fcn sigs */
 } SYMBOL_LIST;
 
 typedef struct display {
-  char *filename;         /* target filename */
+  char filename[200];     /* target filename */
   int rows,
       cols;
   int running,
@@ -339,7 +339,10 @@ int main(int ac, char *av[])
   DISPLAY d;
   memset( &d, 0, sizeof( d ) );
 
-  d.filename = av[1];
+  snprintf( d.filename,
+            sizeof( d.filename ),
+            "%s%s", *av[1] == '/' || *av[1] == '.' ? "" : "./",
+                av[1] );
 
   //get_libs(d.filename); //TODO
 
