@@ -251,7 +251,7 @@ int database_add_sig(DATABASE *db, char *symbol, char *sig)
 
 LL *database_get_symbols(DATABASE *db)
 {
-  LL *ll = ll_calloc();
+  LL *symbols = ll_calloc();
 
   SQL_QUERY_EXEC( db->db,
                   "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d ORDER BY symbols.symbol;",
@@ -260,24 +260,24 @@ LL *database_get_symbols(DATABASE *db)
     //printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
     char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
     strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
-    ll_add( ll, entry );
+    ll_add( symbols, entry );
   }
   SQL_QUERY_END();
 
-  return ll;
+  return symbols;
 }
 
-char **database_get_sigs(DATABASE *db, int *found)
+LL *database_get_sigs(DATABASE *db, int *found)
 {
   LL *symbols = database_get_symbols( db );
 
-  char **list = calloc(1, ll_size( symbols ) * sizeof( char * ) );
+  LL *sigs = ll_calloc();
 
   *found = 0;
 
-  int symbol = 0;
   LLIT i;
   memset( &i, 0, sizeof( LLIT ) );
+
   char *ptr;
   while( ( ptr = ll_iterate( symbols, &i ) ) ) {
     char *entry;
@@ -290,14 +290,11 @@ char **database_get_sigs(DATABASE *db, int *found)
       (*found)++;
       entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
       strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
-      list[symbol] = entry;
+      ll_add( sigs, entry );
       break;
     }
     SQL_QUERY_END();
-
-    ptr++;
-    symbol++;
   }
 
-  return list;
+  return sigs;
 }

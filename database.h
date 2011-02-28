@@ -22,6 +22,6 @@ int database_add_sig(DATABASE *db, char *symbol, char *sig);    /* add a fcn sig
 //int database_add_lib(DATABASE *db, char *name, char *path);     /* add a library */
 
 LL *database_get_symbols(DATABASE *db);    /* get list of symbols */
-char **database_get_sigs(DATABASE *db, int *resolved);    /* get list of signatures (count = same as symbols) */
+LL *database_get_sigs(DATABASE *db, int *found);    /* get list of signatures (count = same as symbols) */
 
 #endif /* DATABASE_H_ */

@@ -34,8 +34,8 @@ enum {
 };
 
 typedef struct symbol_list {
-  LL *func;            /* ordered list of function names */
-  char **sig;             /* ordered list of sets of function params */
+  LL *func;               /* ordered list of function names */
+  LL *sig;                /* ordered list of sets of function params */
   int *selected;          /* list of selected items */
   int display_offset,     /* current item as top of list to display */
       selected_offset,    /* the current selected item */
@@ -227,7 +227,9 @@ static void _draw_display(DISPLAY *d)
       printw( "%s ", ll_access( d->symbols.func, d->symbols.display_offset + i ) );
       attroff( A_BOLD );
 
-      printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? d->symbols.sig[d->symbols.display_offset + i] : "(int)()" );
+      printw( "%s",
+              ll_access( d->symbols.sig, d->symbols.display_offset + i ) ?
+                  ll_access( d->symbols.sig, d->symbols.display_offset + i ) : "(int)()" );
 
       if (i == d->symbols.selected_offset - d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
       else attroff( COLOR_PAIR( 2 ) );
@@ -400,10 +402,8 @@ int main(int ac, char *av[])
   database_kill( db );
 
   /* free symbol list */
-  for( int i = 0; i < d.symbols.count; i++ ) {
-    ll_free( d.symbols.func );
-    if( d.symbols.sig ) N_FREE( d.symbols.sig[i] );
-  }
+  ll_free( d.symbols.func );
+  ll_free( d.symbols.sig );
 
   return 0;
 }
