@@ -10,6 +10,7 @@
 #include "ldd.h"
 #include "exec.h"
 #include "database.h"
+#include "ll.h"
 
 #define N_FREE(X) \
   do {            \
@@ -33,7 +34,7 @@ enum {
 };
 
 typedef struct symbol_list {
-  char **func;            /* ordered list of function names */
+  LL *func;            /* ordered list of function names */
   char **sig;             /* ordered list of sets of function params */
   int *selected;          /* list of selected items */
   int display_offset,     /* current item as top of list to display */
@@ -66,8 +67,8 @@ static char *_strip_path(char *file_path)
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
-
-  sl->func = database_get_symbols( db, &sl->count );
+  sl->func = database_get_symbols( db );
+  sl->count = ll_size( sl->func );
   sl->sig = database_get_sigs( db, &sl->no_sigs );
   sl->selected = calloc( 1, sl->count * sizeof( int ) );
 }
@@ -223,7 +224,7 @@ static void _draw_display(DISPLAY *d)
       else attron( COLOR_PAIR( 2 ) );
 
       attron( A_BOLD );
-      printw( "%s ", d->symbols.func[d->symbols.display_offset + i] );
+      printw( "%s ", ll_access( d->symbols.func, d->symbols.display_offset + i ) );
       attroff( A_BOLD );
 
       printw( "%s", d->symbols.sig[d->symbols.display_offset + i] ? d->symbols.sig[d->symbols.display_offset + i] : "(int)()" );
@@ -345,7 +346,7 @@ int main(int ac, char *av[])
                 av[1] );
 
   //get_libs(d.filename); //TODO
-
+//exit(0);
   _init_display();
   d.state = STATE_PROCESSING;
 
@@ -374,7 +375,7 @@ int main(int ac, char *av[])
   }
 
   free_dynsyms( ds );
-
+  _disable_display();
   _populate_symbol_list( db, &d.symbols );
 
   /* add target to DB */
@@ -400,7 +401,7 @@ int main(int ac, char *av[])
 
   /* free symbol list */
   for( int i = 0; i < d.symbols.count; i++ ) {
-    if( d.symbols.func ) N_FREE( d.symbols.func[i] );
+    ll_free( d.symbols.func );
     if( d.symbols.sig ) N_FREE( d.symbols.sig[i] );
   }
 

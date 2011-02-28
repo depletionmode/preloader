@@ -18,11 +18,9 @@ typedef struct llit {
 
 LL *ll_calloc();
 void ll_free(LL *ll);
-
 void ll_add(LL *ll, void *p);
-
 void *ll_iterate(LL *ll, LLIT *i);
-
 int ll_size(LL *ll);
+void *ll_access(LL *ll, int member);  /* random access - grossly inefficient! */
 
 #endif /* LL_H_ */

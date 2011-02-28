@@ -72,3 +72,15 @@ int ll_size(LL *ll)
 
   return c;
 }
+
+void *ll_access(LL *ll, int member)
+{
+  int c = 0;
+  void *p = NULL;
+
+  LLIT i;
+  memset( &i, 0, sizeof( LLIT ) );
+  while( ( p = ll_iterate( ll, &i ) ) ) if( c++ == member ) break;
+
+  return p;
+}

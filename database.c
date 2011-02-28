@@ -55,6 +55,11 @@ static void _create( DATABASE *db ) {
       "  id INTEGER PRIMARY KEY,"           \
       "  signature TEXT"                    \
       ");",
+      "CREATE TABLE libs ("                 \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  name TEXT,"                        \
+      "  path TEXT"                         \
+      ");",
       NULL
   };
 
@@ -244,41 +249,39 @@ int database_add_sig(DATABASE *db, char *symbol, char *sig)
   return sqlite3_last_insert_rowid( db->db );
 }
 
-char **database_get_symbols(DATABASE *db, int *count)
+LL *database_get_symbols(DATABASE *db)
 {
-  char **list = calloc(1, sizeof( char * ) );
+  LL *ll = ll_calloc();
 
-  *count = 0;
   SQL_QUERY_EXEC( db->db,
                   "SELECT symbols.symbol FROM symbols INNER JOIN sym_link ON sym_link.symbol_id=symbols.id WHERE sym_link.target_id=%d ORDER BY symbols.symbol;",
                   db->target_id );
   SQL_QUERY_WHILE_ROW {
     //printf("%s\n", (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ));
-    (*count)++;
-    list = realloc( list, *count * sizeof( char * ) );
     char *entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
     strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
-    list[*count - 1] = entry;
+    ll_add( ll, entry );
   }
   SQL_QUERY_END();
 
-  return list;
+  return ll;
 }
 
 char **database_get_sigs(DATABASE *db, int *found)
 {
-  int count;
-  char **ptr = database_get_symbols( db, &count );
+  LL *symbols = database_get_symbols( db );
 
-  char **list = calloc(1, count * sizeof( char * ) );
+  char **list = calloc(1, ll_size( symbols ) * sizeof( char * ) );
 
   *found = 0;
 
   int symbol = 0;
-  for( int i = 0; i < count; i++ ) {
+  LLIT i;
+  memset( &i, 0, sizeof( LLIT ) );
+  char *ptr;
+  while( ( ptr = ll_iterate( symbols, &i ) ) ) {
     char *entry;
-
-    int symbol_id = _getid( db, "symbols", "symbol", *ptr );
+    int symbol_id = _getid( db, "symbols", "symbol", ptr );
 
     SQL_QUERY_EXEC( db->db,
                     "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d AND active=1;",

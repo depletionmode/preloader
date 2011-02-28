@@ -21,7 +21,9 @@ char *_get_path(char *buf, int *len)
   static char tmp[50];
   memset( tmp, 0, sizeof( tmp ) );
 
-  memcpy( tmp, buf + strcspn( buf, " " ) + 4, strcspn( buf, "(" ) - strcspn( buf, " " ) - 5 );
+  memcpy( tmp,
+          buf + strcspn( buf, " " ) + 4,
+          strcspn( buf, "(" ) - strcspn( buf, " " ) - 5 );
 
   *len = strlen( tmp );
   return tmp;
@@ -39,6 +41,7 @@ LIBS *get_libs(char *path)
 
   char buf[1000];
   while( fgets( buf, sizeof( buf ), pf ) ) {
+    /* ignore linux dynamic linkers (these will always be linked in */
     if( strstr( buf, "linux-vdso" ) ||
         strstr( buf, "linux-gate" ) ||
         strstr( buf, "ld-linux" ) )
