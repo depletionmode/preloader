@@ -11,7 +11,10 @@ typedef struct ll {
   struct lnode *f;
 } LL;
 
-typedef struct lnode LLIT;
+typedef struct llit {
+  struct lnode *at;
+  LL *ll;
+} LLIT;
 
 LL *ll_calloc();
 void ll_free(LL *ll);

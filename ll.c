@@ -18,7 +18,7 @@ struct lnode *_get_last_node(LL *ll)
 {
   struct lnode *n = ll->f;
 
-  if( n ) while( n->n ) n = n;
+  if( n ) while( n->n ) n = n->n;
 
   return n;
 }
@@ -48,11 +48,14 @@ void ll_add(LL *ll, void *p)
 
 void *ll_iterate(LL *ll, LLIT *i)
 {
-  if( !i ) i = ll->f;
+  if( !i->ll ) {
+    i->ll = ll;
+    i->at = ll->f;
+  }
 
-  if( i ) {
-    void *p = i->p;
-    i = i->n;
+  if( i->at ) {
+    void *p = i->at->p;
+    i->at = i->at->n;
     return p;
   }
 
