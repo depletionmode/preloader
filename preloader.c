@@ -216,21 +216,28 @@ static void _draw_display(DISPLAY *d)
 
       attron( COLOR_PAIR( 5 ) );
       attron( A_BOLD );
-      printw( "%c ", d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ' );
+      printw( "%c ",
+              d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ' );
       attroff( A_BOLD );
       attroff( COLOR_PAIR( 5 ) );
 
-      if (i == d->symbols.selected_offset - d->symbols.display_offset) attron( COLOR_PAIR( 1 ) );
-      else attron( COLOR_PAIR( 2 ) );
+      if (i == d->symbols.selected_offset - d->symbols.display_offset)
+        attron( COLOR_PAIR( 1 ) );
+      else
+        attron( COLOR_PAIR( 2 ) );
 
       attron( A_BOLD );
-      printw( "%s ", ll_access( d->symbols.func, d->symbols.display_offset + i ) );
+      printw( "%s ",
+              ll_access( d->symbols.func, d->symbols.display_offset + i ) );
       attroff( A_BOLD );
 
-      printw( "%s", ll_access( d->symbols.sig, d->symbols.display_offset + i ) );
+      printw( "%s",
+              ll_access( d->symbols.sig, d->symbols.display_offset + i ) );
 
-      if (i == d->symbols.selected_offset - d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
-      else attroff( COLOR_PAIR( 2 ) );
+      if (i == d->symbols.selected_offset - d->symbols.display_offset)
+        attroff( COLOR_PAIR( 1 ) );
+      else
+        attroff( COLOR_PAIR( 2 ) );
 
       pos_y++;
     }
