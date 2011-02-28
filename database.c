@@ -283,6 +283,7 @@ LL *database_get_sigs(DATABASE *db, int *found)
     char *entry;
     int symbol_id = _getid( db, "symbols", "symbol", ptr );
 
+    int pre = *found;
     SQL_QUERY_EXEC( db->db,
                     "SELECT signatures.signature FROM signatures INNER JOIN sig_link ON sig_link.sig_id=signatures.id WHERE sig_link.symbol_id=%d AND active=1;",
                     symbol_id );
@@ -292,6 +293,12 @@ LL *database_get_sigs(DATABASE *db, int *found)
       strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
       ll_add( sigs, entry );
       break;
+    }
+
+    if( *found - pre == 0 ) {
+      entry = malloc( strlen( "(int)()" ) + 1 );
+      strcpy( entry, "(int)()" );
+      ll_add( sigs, entry );
     }
     SQL_QUERY_END();
   }

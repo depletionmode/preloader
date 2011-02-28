@@ -227,9 +227,7 @@ static void _draw_display(DISPLAY *d)
       printw( "%s ", ll_access( d->symbols.func, d->symbols.display_offset + i ) );
       attroff( A_BOLD );
 
-      printw( "%s",
-              ll_access( d->symbols.sig, d->symbols.display_offset + i ) ?
-                  ll_access( d->symbols.sig, d->symbols.display_offset + i ) : "(int)()" );
+      printw( "%s", ll_access( d->symbols.sig, d->symbols.display_offset + i ) );
 
       if (i == d->symbols.selected_offset - d->symbols.display_offset) attroff( COLOR_PAIR( 1 ) );
       else attroff( COLOR_PAIR( 2 ) );
