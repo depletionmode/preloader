@@ -64,6 +64,93 @@ static char *_strip_path(char *file_path)
   return ptr;
 }
 
+static void _skip_spaces(char *ptr)
+{
+  while( ptr && *ptr == ' ' ) ptr++;
+}
+
+static void _truncate_spaces(char *ptr)
+{
+  while( ptr && *(ptr + 1) && *ptr == ' ' && *(ptr + 1) == ' ' ) ptr++;
+}
+
+static char *_validate_sig(char *sig)
+{
+  /* this function first tries to force signature to conform and failing that returns NULL */
+
+  /* conformity rules :
+   * - strip excess whitespaces:
+   *  -- only 1 space allowed between items
+   *  -- no spaces between brackets and items and the pair of brackets themselves
+   *  -- space THEN *, no space between * and item
+   * - two sets of brackets (...)(...)
+   * -
+   */
+
+  static char final_sig[1024];
+  memset( final_sig, 0, sizeof( final_sig) );
+
+  char *ptr = sig;
+  char *f_sig_ptr = final_sig;
+
+  /* skip spaces at start */
+  _skip_spaces( ptr );
+
+  /* check for open bracket */
+  if( *(ptr++) != '(' ) return NULL;
+  *(f_sig_ptr++) = *ptr;
+
+  /* skip spaces */
+  _skip_spaces( ptr );
+
+  /* loop until closing bracket */
+  while( *ptr != ')' ) {
+    /* truncate spaces to a single one between items */
+    _truncate_spaces( ptr );
+
+    *(f_sig_ptr++) = *(ptr++);
+  }
+  *(f_sig_ptr++) = *ptr;
+
+  /* skip spaces */
+  _skip_spaces( ptr );
+
+  /* check for open bracket */
+  if( *(ptr++) != '(' ) return NULL;
+  *(f_sig_ptr++) = *ptr;
+
+  /* loop until closing bracket */
+  while( *ptr != ')' ) {
+    /* skip spaces after bracket */
+    if( *(ptr - 1) == '(' )
+      _skip_spaces( ptr );
+
+    /* skip all spaces after '*' */
+    if( *(ptr - 1) == '*' )
+      _skip_spaces( ptr );
+
+    /* make sure there is a space before '*' */
+    if( *(ptr - 1) != ' ' )
+      *(f_sig_ptr++) = ' ';
+
+    /* skip all spaces before comma */
+    if( *(ptr - 1) == ' ' && *ptr == ',' )
+      _skip_spaces( ptr - 1 );
+
+    /* make sure there is a space after comma */
+    if( *(ptr - 1) == ',' && *ptr != ' ' )
+      *(f_sig_ptr++) = ' ';
+
+    /* truncate spaces to a single one between items */
+    _truncate_spaces( ptr );
+
+    *(f_sig_ptr++) = *(ptr++);
+  }
+  *(f_sig_ptr++) = *ptr;
+
+  return f_sig_ptr;
+}
+
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
 {
   memset( sl, 0, sizeof( SYMBOL_LIST ) );
@@ -319,8 +406,12 @@ static void _parse_input(DISPLAY *d)
   case KEY_PPAGE:
     _list_scroll( d, SCROLL_UP, d->rows - 4 );
     break;
-  case 0xd: // ???
+  case '\n': // ???
     /* edit symbol (sig +/ code?) */
+  {
+    char *sig = ll_access( d->symbols.sig, d->symbols.selected_offset );
+    sig = _get_input( d, "function signature", sig );
+  }
     break;
   case 0x20:  /* space */
     /* select symbol for ld_preloading */
