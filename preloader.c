@@ -432,12 +432,8 @@ static void _parse_input(DISPLAY *d)
     char *sig = ll_access( d->symbols.sig, d->symbols.selected_offset );
     sig = _get_input( d, "function signature", sig );
 
-    _disable_display();
-    printf("\n\n\nsym: %s, sig: %s\n", (char *)ll_access( d->symbols.func, d->symbols.selected_offset ),_validate_sig( sig ));
     if( ( sig = _validate_sig( sig ) ) )
       database_add_sig( d->db, (char *)ll_access( d->symbols.func, d->symbols.selected_offset ), sig );
-    sleep(1);
-    _init_display();
 
     /* refresh sig list */
     d->symbols.sig = database_get_sigs( d->db, &d->symbols.no_sigs );

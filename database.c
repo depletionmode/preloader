@@ -23,7 +23,7 @@ static sqlite3_stmt *_Zstmt;
             char query[1000];                                             \
             snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );     \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );                  \
-            /* DEBUG */ printf("SQL DEBUG: %s\n", query);                \
+            /* DEBUG  printf("SQL DEBUG: %s\n", query); */                \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
