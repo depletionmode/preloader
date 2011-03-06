@@ -67,7 +67,7 @@ LIBS *get_libs(char *path)
 
   pclose( pf );
 
-  return l;
+  return f_l;
 }
 
 void free_libs(LIBS *l)

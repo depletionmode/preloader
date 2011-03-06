@@ -32,7 +32,8 @@
 enum {
   STATE_NORMAL,
   STATE_NOTIFICATION,
-  STATE_PROCESSING
+  STATE_PROCESSING_LIBS,
+  STATE_PROCESSING_SYMS,
 };
 
 typedef struct symbol_list {
@@ -351,18 +352,26 @@ static void _draw_display(DISPLAY *d)
     }
     break;
   }
-  case STATE_PROCESSING:
+  case STATE_PROCESSING_SYMS:
+  case STATE_PROCESSING_LIBS:
   {
-    static int symbol_count = 0;
+    static int count = 0;
     static char swirl[] = "|/-\\";
     static char *c = swirl;
+
+    if( count >> 24 != d->state ) {
+      count = d->state << 24;
+    }
 
     move( 2, 2 );
     attron( COLOR_PAIR( 2 ) );
     attron( A_BOLD );
 
     if( *(++c) == '\0' ) c = swirl;
-    printw( "%c Processing symbol %d, please be patient...", *c, ++symbol_count );
+    printw( "%c Processing %s %d, please be patient...",
+            *c,
+            d->state == STATE_PROCESSING_SYMS ? "symbol" : "library",
+            ++count & 0xffffff );
 
     attroff( A_BOLD );
 
@@ -470,7 +479,7 @@ int main(int ac, char *av[])
                 av[1] );
 //exit(0);
   _init_display();
-  d.state = STATE_PROCESSING;
+  d.state = STATE_PROCESSING_SYMS;
 
   d.db = database_init();
   database_add_target( d.db, d.filename ); /* add target to db */
@@ -491,9 +500,15 @@ int main(int ac, char *av[])
 
   free_dynsyms( ds );
 
+  d.state = STATE_PROCESSING_LIBS;
+
+  _disable_display();
+  /* add libs to db */
   LIBS *libs = get_libs(d.filename);
   LIBS *p_libs = libs;
   while( p_libs ) {
+    d.extra = p_libs->path;
+    _draw_display( &d );
     database_add_lib( d.db, p_libs->name, p_libs->path );
     p_libs = p_libs->nxt;
   }
