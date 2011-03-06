@@ -291,8 +291,8 @@ LL *database_get_sigs(DATABASE *db, int *found)
     }
 
     if( *found - pre == 0 ) {
-      entry = malloc( strlen( "(int)()" ) + 1 );
-      strcpy( entry, "(int)()" );
+      entry = malloc( strlen( "??" ) + 1 );
+      strcpy( entry, "??" );
       ll_add( sigs, entry );
     }
     SQL_QUERY_END();
