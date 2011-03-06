@@ -60,6 +60,11 @@ static void _create( DATABASE *db ) {
       "  name TEXT,"                        \
       "  path TEXT"                         \
       ");",
+      "CREATE TABLE lib_link ("             \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  target_id INTEGER,"                \
+      "  lib_id INTEGER"                 \
+      ");",
       NULL
   };
 
@@ -183,7 +188,7 @@ int database_add_symbol(DATABASE *db, char *sym)
     symbol_id = sqlite3_last_insert_rowid( db->db );
   }
 
-  /* check if symbol and target is linked */
+  /* check if symbol and target are linked */
   int rows = 0;
   SQL_QUERY_EXEC( db->db, "SELECT * FROM sym_link WHERE target_id='%d' AND symbol_id='%d';", db->target_id, symbol_id);
   SQL_QUERY_WHILE_ROW rows++;
@@ -242,6 +247,35 @@ int database_add_sig(DATABASE *db, char *symbol, char *sig)
   SQL_QUERY_END();
 
   return sqlite3_last_insert_rowid( db->db );
+}
+
+int database_add_lib(DATABASE *db, char *name, char *path)
+{
+  int lib_id;
+
+  if( !( lib_id = _getid( db, "libs", "path", path ) ) ) {
+    /* new lib, so add to db */
+    SQL_QUERY_EXEC( db->db, "INSERT INTO libs ('name','path') VALUES ('%s','%s');", name, path);
+    SQL_QUERY_WHILE_ROW;
+    SQL_QUERY_END();
+
+    lib_id = sqlite3_last_insert_rowid( db->db );
+  }
+
+  /* check if lib and target are linked */
+  int rows = 0;
+  SQL_QUERY_EXEC( db->db, "SELECT * FROM lib_link WHERE target_id='%d' AND lib_id='%d';", db->target_id, lib_id);
+  SQL_QUERY_WHILE_ROW rows++;
+  SQL_QUERY_END();
+
+  /* link lib and target */
+  if( !rows ) {
+    SQL_QUERY_EXEC( db->db, "INSERT INTO sym_link ('target_id','lib_id') VALUES ('%d','%d');", db->target_id, lib_id);
+    SQL_QUERY_WHILE_ROW;
+    SQL_QUERY_END();
+  }
+
+  return lib_id;
 }
 
 LL *database_get_symbols(DATABASE *db)
