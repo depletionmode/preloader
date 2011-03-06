@@ -8,7 +8,7 @@ struct dynsym {
   DYNSYM *nxt;
 };
 
-DYNSYM *get_dynsyms(int fd);
+DYNSYM *get_dynsyms(int fd, int unresolved_only);
 void free_dynsyms(DYNSYM *ds);
 
 #endif /* DYNSYM_H_ */

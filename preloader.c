@@ -486,7 +486,7 @@ int main(int ac, char *av[])
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
-  DYNSYM *ds = get_dynsyms( fd );
+  DYNSYM *ds = get_dynsyms( fd, 1 );
   close( fd );
 
   /* add symbols to db */
@@ -502,7 +502,6 @@ int main(int ac, char *av[])
 
   d.state = STATE_PROCESSING_LIBS;
 
-  _disable_display();
   /* add libs to db */
   LIBS *libs = get_libs(d.filename);
   LIBS *p_libs = libs;
