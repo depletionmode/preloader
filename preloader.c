@@ -468,8 +468,6 @@ int main(int ac, char *av[])
             sizeof( d.filename ),
             "%s%s", *av[1] == '/' || *av[1] == '.' ? "" : "./",
                 av[1] );
-
-  //get_libs(d.filename); //TODO
 //exit(0);
   _init_display();
   d.state = STATE_PROCESSING;
@@ -492,15 +490,17 @@ int main(int ac, char *av[])
   }
 
   free_dynsyms( ds );
-  _disable_display();
-  _populate_symbol_list( d.db, &d.symbols );
 
-  /* add target to DB */
-  /* get dynamic symbols */
-  /* add symbols to DB ) */
-  /* (auto-resolve sigs and add to DB) */
-  /* pull symbols from DB and show symbol list (pull on every refresh - inefficient but probably quick) */
-  /* allow for selection of symbols */
+  LIBS *libs = get_libs(d.filename);
+  LIBS *p_libs = libs;
+  while( p_libs ) {
+    database_add_lib( d.db, p_libs->name, p_libs->path );
+    p_libs = p_libs->nxt;
+  }
+
+  free_libs( libs );
+
+  _populate_symbol_list( d.db, &d.symbols );
 
   d.state = STATE_NORMAL;
   d.running = 1;
