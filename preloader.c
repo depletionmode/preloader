@@ -64,14 +64,14 @@ static char *_strip_path(char *file_path)
   return ptr;
 }
 
-static void _skip_spaces(char *ptr)
+static void _skip_spaces(char **ptr)
 {
-  while( ptr && *ptr == ' ' ) ptr++;
+  while( *ptr && **ptr == ' ' ) (*ptr)++;
 }
 
-static void _truncate_spaces(char *ptr)
+static void _truncate_spaces(char **ptr)
 {
-  while( ptr && *(ptr + 1) && *ptr == ' ' && *(ptr + 1) == ' ' ) ptr++;
+  while( *ptr && *(*ptr + 1) && **ptr == ' ' && *(*ptr + 1) == ' ' ) (*ptr)++;
 }
 
 static char *_validate_sig(char *sig)
@@ -87,6 +87,8 @@ static char *_validate_sig(char *sig)
    * -
    */
 
+  /* this stuff is very messy - I know! */
+
   static char final_sig[1024];
   memset( final_sig, 0, sizeof( final_sig) );
 
@@ -94,61 +96,78 @@ static char *_validate_sig(char *sig)
   char *f_sig_ptr = final_sig;
 
   /* skip spaces at start */
-  _skip_spaces( ptr );
+  _skip_spaces( &ptr );
 
   /* check for open bracket */
-  if( *(ptr++) != '(' ) return NULL;
-  *(f_sig_ptr++) = *ptr;
+  if( *ptr != '(' ) return NULL;
+  *(f_sig_ptr++) = *(ptr++);
 
   /* skip spaces */
-  _skip_spaces( ptr );
+  _skip_spaces( &ptr );
 
   /* loop until closing bracket */
   while( *ptr != ')' ) {
     /* truncate spaces to a single one between items */
-    _truncate_spaces( ptr );
+    _truncate_spaces( &ptr );
+
+    /* handle if '*' */
+    if( *ptr == '*' && *(ptr - 1) != ' ' )
+      *(f_sig_ptr++) = ' ';
 
     *(f_sig_ptr++) = *(ptr++);
   }
+  /* skip trailing space before bracket */
+  if( *(f_sig_ptr - 1) == ' ' )
+    f_sig_ptr--;
   *(f_sig_ptr++) = *ptr;
 
   /* skip spaces */
-  _skip_spaces( ptr );
+  _skip_spaces( &ptr );
+
+  ptr++;
 
   /* check for open bracket */
-  if( *(ptr++) != '(' ) return NULL;
-  *(f_sig_ptr++) = *ptr;
+  if( *ptr != '(' ) return NULL;
+  *(f_sig_ptr++) = *(ptr++);
 
   /* loop until closing bracket */
   while( *ptr != ')' ) {
     /* skip spaces after bracket */
     if( *(ptr - 1) == '(' )
-      _skip_spaces( ptr );
+      _skip_spaces( &ptr );
 
-    /* skip all spaces after '*' */
-    if( *(ptr - 1) == '*' )
-      _skip_spaces( ptr );
+    /* truncate spaces to a single one between items */
+    _truncate_spaces( &ptr );
 
     /* make sure there is a space before '*' */
-    if( *(ptr - 1) != ' ' )
+    if( *ptr == '*' && *(ptr - 1) != ' ' )
       *(f_sig_ptr++) = ' ';
 
-    /* skip all spaces before comma */
-    if( *(ptr - 1) == ' ' && *ptr == ',' )
-      _skip_spaces( ptr - 1 );
+    /* skip space after '*' */
+    if( *ptr == '*' && *(ptr + 1) == ' ' ) {
+      ptr++;
+      _skip_spaces( &ptr );
+      *(f_sig_ptr++) = '*';
+      continue;
+    }
+
+    /* skip space before comma */
+    if( *ptr == ' ' && *(ptr + 1) == ',' ) ptr++;
 
     /* make sure there is a space after comma */
     if( *(ptr - 1) == ',' && *ptr != ' ' )
       *(f_sig_ptr++) = ' ';
 
-    /* truncate spaces to a single one between items */
-    _truncate_spaces( ptr );
-
     *(f_sig_ptr++) = *(ptr++);
   }
+  /* skip trailing space before bracket */
+  if( *(f_sig_ptr - 1) == ' ' )
+    f_sig_ptr--;
   *(f_sig_ptr++) = *ptr;
 
-  return f_sig_ptr;
+  //printf("c: %c ptr: %s\tfinal_sig: %s\n", *ptr, ptr, final_sig);
+
+  return final_sig;
 }
 
 static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
