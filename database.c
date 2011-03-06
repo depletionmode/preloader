@@ -23,7 +23,7 @@ static sqlite3_stmt *_Zstmt;
             char query[1000];                                             \
             snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );     \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );                  \
-            /* DEBUG   printf("SQL DEBUG: %s\n", query); */               \
+            /* DEBUG */ printf("SQL DEBUG: %s\n", query);                \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -224,27 +224,22 @@ int database_add_sig(DATABASE *db, char *symbol, char *sig)
   }
 
   /* deactivate existing links */
-  if( !_getid( db, "sig_link", "sig_id", itoa( sig_id ) ) ) {
-    int sig_link_id;
-    if( ( sig_link_id = _getid( db, "sig_link", "symbol_id", itoa( symbol_id ) ) ) ) {
-      SQL_QUERY_EXEC( db->db,
-                      "UPDATE sig_link SET active=0 WHERE id=%s",
-                      itoa( sig_link_id ) );
-      SQL_QUERY_WHILE_ROW;
-      SQL_QUERY_END();
-    }
-
-    //haarat azharah;
-    //avisror
-
-    /* link sig to symbol */
+  int sig_link_id;
+  if( ( sig_link_id = _getid( db, "sig_link", "symbol_id", itoa( symbol_id ) ) ) ) {
     SQL_QUERY_EXEC( db->db,
-                    "INSERT INTO sig_link ('symbol_id','sig_id','active') VALUES ('%d','%d',1);",
-                    symbol_id,
-                    sig_id );
+                    "UPDATE sig_link SET active=0 WHERE id=%s",
+                    itoa( sig_link_id ) );
     SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
   }
+
+  /* link sig to symbol */
+  SQL_QUERY_EXEC( db->db,
+                  "INSERT INTO sig_link ('symbol_id','sig_id','active') VALUES ('%d','%d',1);",
+                  symbol_id,
+                  sig_id );
+  SQL_QUERY_WHILE_ROW;
+  SQL_QUERY_END();
 
   return sqlite3_last_insert_rowid( db->db );
 }

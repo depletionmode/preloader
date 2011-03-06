@@ -27,6 +27,8 @@
     exit( X );  \
   } while( 0 )
 
+#define BTWN(X,Y,Z) ( X >= Y && X <= Z )
+
 enum {
   STATE_NORMAL,
   STATE_NOTIFICATION,
@@ -44,6 +46,7 @@ typedef struct symbol_list {
 } SYMBOL_LIST;
 
 typedef struct display {
+  DATABASE *db;
   char filename[200];     /* target filename */
   int rows,
       cols;
@@ -77,15 +80,6 @@ static void _truncate_spaces(char **ptr)
 static char *_validate_sig(char *sig)
 {
   /* this function first tries to force signature to conform and failing that returns NULL */
-
-  /* conformity rules :
-   * - strip excess whitespaces:
-   *  -- only 1 space allowed between items
-   *  -- no spaces between brackets and items and the pair of brackets themselves
-   *  -- space THEN *, no space between * and item
-   * - two sets of brackets (...)(...)
-   * -
-   */
 
   /* this stuff is very messy - I know! */
 
@@ -163,7 +157,11 @@ static char *_validate_sig(char *sig)
   /* skip trailing space before bracket */
   if( *(f_sig_ptr - 1) == ' ' )
     f_sig_ptr--;
-  *(f_sig_ptr++) = *ptr;
+  *f_sig_ptr = *ptr;
+
+  /* if there is no last bracket, add it
+  if( *f_sig_ptr  != ')' )
+    *(++f_sig_ptr) = ')';*/
 
   //printf("c: %c ptr: %s\tfinal_sig: %s\n", *ptr, ptr, final_sig);
 
@@ -213,16 +211,20 @@ static void _disable_display()
 
 static char *_get_input(DISPLAY *d, char *str, char *dflt)
 {
+  //TODO KEY_ESC cancelation
   static char in[1000];
   char *ptr = in;
 
-  echo();
+  noecho();
   attron( COLOR_PAIR( 2 ) );
 
   mvchgat( d->rows - 4, 2, -1, A_INVIS, 0, NULL );
   move( d->rows - 3, 2 );
   for( int i = 0; i < d->cols; i++ ) addch( ' ' );
   mvprintw( d->rows - 3, 2, "%s > ", str );
+
+  int y, x;
+  getyx( stdscr, y, x );
 
   attron( A_BOLD );
   curs_set( 2 );
@@ -241,23 +243,23 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
 
     switch( c ) {
     case KEY_BACKSPACE:
-    {
-      int r, c;
-      getyx( stdscr, r, c );
-      if( ptr > in ) {
-        addch(' ');
-        move( r, c );
-        ptr--;
-      } else
-        move( r, c + 1 );
-    }
+      if( ptr != in )
+        *(--ptr) = '\0';
       break;
     case '\n':
       end = 1;
       c = '\0';
     default:
-      *(ptr++) = c;
+      if( strspn( (char*)&c, " ()*,.")
+          || BTWN( c, 0x30, 0x39 )
+          || BTWN( c, 0x41, 0x5a )
+          || BTWN( c, 0x61, 0x7a ) )
+        *(ptr++) = c;
     }
+
+    mvprintw( y, x, "%s", in );
+    for( int i = 0; i < d->cols - strlen( in ) - 3; i++ ) addch( ' ' );
+    move( y, x + strlen( in ) );
 
   } while ( !end && ( c = getch() ) );
 
@@ -425,11 +427,20 @@ static void _parse_input(DISPLAY *d)
   case KEY_PPAGE:
     _list_scroll( d, SCROLL_UP, d->rows - 4 );
     break;
-  case '\n': // ???
-    /* edit symbol (sig +/ code?) */
+  case '\n':  /* enter */
   {
     char *sig = ll_access( d->symbols.sig, d->symbols.selected_offset );
     sig = _get_input( d, "function signature", sig );
+
+    _disable_display();
+    printf("\n\n\nsym: %s, sig: %s\n", (char *)ll_access( d->symbols.func, d->symbols.selected_offset ),_validate_sig( sig ));
+    if( ( sig = _validate_sig( sig ) ) )
+      database_add_sig( d->db, (char *)ll_access( d->symbols.func, d->symbols.selected_offset ), sig );
+    sleep(1);
+    _init_display();
+
+    /* refresh sig list */
+    d->symbols.sig = database_get_sigs( d->db, &d->symbols.no_sigs );
   }
     break;
   case 0x20:  /* space */
@@ -467,8 +478,8 @@ int main(int ac, char *av[])
   _init_display();
   d.state = STATE_PROCESSING;
 
-  DATABASE *db = database_init();
-  database_add_target( db, d.filename ); /* add target to db */
+  d.db = database_init();
+  database_add_target( d.db, d.filename ); /* add target to db */
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
@@ -480,20 +491,13 @@ int main(int ac, char *av[])
   while( p_ds ) {
     d.extra = p_ds->name;
     _draw_display( &d );
-    database_add_symbol( db, p_ds->name );
-    if( !strcmp( p_ds->name, "memcpy" ) ) database_add_sig( db, p_ds->name, "(void*)(void* destination, const void* source, size_t num)" );
-    if( !strcmp( p_ds->name, "atoi" ) ) database_add_sig( db, p_ds->name, "(int)(const char* str)" );
-    if( !strcmp( p_ds->name, "free" ) ) database_add_sig( db, p_ds->name, "(void)(void* ptr)" );
-    if( !strcmp( p_ds->name, "malloc" ) ) database_add_sig( db, p_ds->name, "(void*)(size_t size)" );
-    if( !strcmp( p_ds->name, "printf" ) ) database_add_sig( db, p_ds->name, "(int)(const char* format, ...)" );
-    if( !strcmp( p_ds->name, "putchar" ) ) database_add_sig( db, p_ds->name, "(int)(int character)" );
-    if( !strcmp( p_ds->name, "strlen" ) ) database_add_sig( db, p_ds->name, "(size_t)(const char* str)" );
+    database_add_symbol( d.db, p_ds->name );
     p_ds = p_ds->nxt;
   }
 
   free_dynsyms( ds );
   _disable_display();
-  _populate_symbol_list( db, &d.symbols );
+  _populate_symbol_list( d.db, &d.symbols );
 
   /* add target to DB */
   /* get dynamic symbols */
@@ -514,7 +518,7 @@ int main(int ac, char *av[])
 
   _disable_display();
 
-  database_kill( db );
+  database_kill( d.db );
 
   /* free symbol list */
   ll_free( d.symbols.func );
