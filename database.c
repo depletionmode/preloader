@@ -63,7 +63,12 @@ static void _create( DATABASE *db ) {
       "CREATE TABLE lib_link ("             \
       "  id INTEGER PRIMARY KEY,"           \
       "  target_id INTEGER,"                \
-      "  lib_id INTEGER"                 \
+      "  lib_id INTEGER"                    \
+      ");",
+      "CREATE TABLE sym_lib_link ("         \
+      "  id INTEGER PRIMARY KEY,"           \
+      "  sym_link_id INTEGER,"              \
+      "  lib_id INTEGER"                    \
       ");",
       NULL
   };
@@ -206,8 +211,7 @@ int database_add_symbol(DATABASE *db, char *sym)
 
 int database_add_sig(DATABASE *db, char *symbol, char *sig)
 {
-  // TODO: verify sig for format
-  // sig should already by nicely formed ( one elsewhere, this isn't the database code's responsibility)
+  // sig should already by nicely formed (done elsewhere, this isn't the database code's responsibility)
   // format: (returntype)(type name, type name, type name) e.g. (void)(char* userKey, int len, AESKEY* aes);
 
   if( !db->target_id )
@@ -277,6 +281,48 @@ int database_add_lib(DATABASE *db, char *name, char *path)
 
   return lib_id;
 }
+
+int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path)
+{
+  int sym_lib_link_id;
+
+  /* find sym_link_id */
+  int sym_link_id;
+  SQL_QUERY_EXEC( db->db,
+                  "SELECT sym_link.id FROM sym_link INNER JOIN symbols ON sym_link.symbol_id=symbols.id WHERE symbols.name='%s' AND sym_link.target_id=%s;",
+                  sym,
+                  db->target_id );
+  SQL_QUERY_WHILE_ROW
+    sym_link_id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
+  SQL_QUERY_END();
+
+  if( !sym_link_id )
+    return 0;
+  
+  /* find lib_id */
+  int lib_id;
+  if( !( lib_id = _getid( db, "libs", "path", lib_path ) ) )
+    return 0;
+  
+  /* see if there is already a link */
+  SQL_QUERY_EXEC( db->db,
+                  "SELECT * FROM sym_lib_link WHERE sym_link_id=%d AND lib_id=%d;",
+                  sym_link_id,
+                  lib_id,
+                );
+  SQL_QUERY_WHILE_ROW
+    sym_lib_link_id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
+  SQL_QUERY_END();
+
+  if( !sym_lib_link_id ) {
+    SQL_QUERY_EXEC( db->db, "INSERT INTO sym_lib_link ('sym_link_id','lib_id') VALUES ('%d','%d');", sym_link_id, lib_id);
+    SQL_QUERY_WHILE_ROW;
+    SQL_QUERY_END();
+  }
+
+  return sym_lib_link_id;
+}
+
 
 LL *database_get_symbols(DATABASE *db)
 {
