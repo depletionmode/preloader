@@ -289,7 +289,7 @@ int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path)
   /* find sym_link_id */
   int sym_link_id;
   SQL_QUERY_EXEC( db->db,
-                  "SELECT sym_link.id FROM sym_link INNER JOIN symbols ON sym_link.symbol_id=symbols.id WHERE symbols.name='%s' AND sym_link.target_id=%s;",
+                  "SELECT sym_link.id FROM sym_link INNER JOIN symbols ON sym_link.symbol_id=symbols.id WHERE symbols.name='%s' AND sym_link.target_id=%d;",
                   sym,
                   db->target_id );
   SQL_QUERY_WHILE_ROW
@@ -308,7 +308,7 @@ int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path)
   SQL_QUERY_EXEC( db->db,
                   "SELECT * FROM sym_lib_link WHERE sym_link_id=%d AND lib_id=%d;",
                   sym_link_id,
-                  lib_id,
+                  lib_id
                 );
   SQL_QUERY_WHILE_ROW
     sym_lib_link_id = sqlite3_column_int( SQL_QUERY_PTR, 0 );
