@@ -346,6 +346,10 @@ static void _draw_display(DISPLAY *d)
       printw( "%s",
               ll_access( d->symbols.sig, d->symbols.display_offset + i ) );
 
+      char *str = _strip_path( ll_access( d->symbols.lib,
+                               d->symbols.display_offset + i ) );
+      mvprintw( pos_y, d->cols - strlen( str ) - 4, "[%s]", str );
+
       if (i == d->symbols.selected_offset - d->symbols.display_offset)
         attroff( COLOR_PAIR( 1 ) );
       else
@@ -481,7 +485,7 @@ int main(int ac, char *av[])
             "%s%s", *av[1] == '/' || *av[1] == '.' ? "" : "./",
                 av[1] );
 
-  //_init_display();
+  _init_display();
   d.state = STATE_PROCESSING_SYMS;
 
   d.db = database_init();
@@ -496,7 +500,7 @@ int main(int ac, char *av[])
   DYNSYM *p_ds = ds;
   while( p_ds ) {
     d.extra = p_ds->name;
-    //_draw_display( &d );
+    _draw_display( &d );
     database_add_symbol( d.db, p_ds->name );
     p_ds = p_ds->nxt;
   }
@@ -510,18 +514,14 @@ int main(int ac, char *av[])
   LIBS *p_libs = libs;
   while( p_libs ) {
     d.extra = p_libs->path;
-    //_draw_display( &d );
+    _draw_display( &d );
     database_add_lib( d.db, p_libs->name, p_libs->path );
-    /*int fd_lib = open( p_libs->path, O_RDONLY );
-    DYNSYM *ds_lib = get_dynsyms( fd_lib, 0 );
-    ll_add( lib_sym_info, ds_lib );
-    close( fd_lib );*/
 
     p_libs = p_libs->nxt;
   }
 
   /* match symbols to libs */
-  /* immensely inefficient, call get_dynsyms() ONCE for each lib */
+  /* immensely inefficient, should call get_dynsyms() ONCE for each lib!! (TODO) */
   p_ds = ds;
   while( p_ds ) {   /* for each symbol in target */
     int found = 0;
@@ -536,6 +536,7 @@ int main(int ac, char *av[])
       while( p_ds_lib ) { /* for each symbol in library */
         if( strcmp( p_ds_lib->name, p_ds->name ) == 0 ) {
           printf( "%s:%s\n", p_ds->name, p_lib->path );
+          database_link_sym_lib( d.db, p_ds->name, p_lib->path );
           found = 1;
           break;
         }
@@ -550,32 +551,6 @@ int main(int ac, char *av[])
 
     p_ds = p_ds->nxt; /* move to next symbol */
   }
-
-exit(0);
-  /* match symbols to libs
-  p_ds = ds;
-  while( p_ds ) {
-    LLIT itr;
-    memset( &itr, 0, sizeof( LLIT ) );
-
-    int found = 0;
-    DYNSYM *ptr;
-    while( ( ptr = ll_iterate( lib_sym_info, &itr ) ) ) {
-      /* loop through symbols and loop through libs to find a match
-      DYNSYM *p_ds_lib = ptr;
-      while( p_ds_lib && !found ) {
-        if( strcmp( p_ds_lib->name, p_ds->name ) == 0 ) {
-          printf( "found: %s\n", p_ds->name );
-          found = 1;
-          break;
-        }
-
-        p_ds_lib = p_ds_lib->nxt;
-      }
-    }
-
-    p_ds = p_ds->nxt;
-  }*/
 
   ll_free( lib_sym_info );
 
