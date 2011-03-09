@@ -6,7 +6,7 @@
 
 #include "dynsym.h"
 
-DYNSYM *get_dynsyms(int fd, int unresolved_only) {
+DYNSYM *get_dynsyms(int fd, int flags) {
   DYNSYM *f_ds = NULL, *ds = NULL;
 
   Elf *e = NULL;
@@ -37,7 +37,9 @@ DYNSYM *get_dynsyms(int fd, int unresolved_only) {
         gelf_getsym( d, i, &sym );
 
         if( ELF32_ST_TYPE( sym.st_info ) == STT_FUNC ) { /* also good for 64-bit */
-          if( unresolved_only ^ 1 || !sym.st_value ) {
+          if( DYNSYM_ALL
+              || ( DYNSYM_UNRESOLVED_ONLY && !sym.st_value )
+              || ( DYNSYM_RESOLVED_ONLY && sym.st_value ) ) {
             DYNSYM *n_ds = calloc( 1, sizeof( DYNSYM ) );
 
             char *name = elf_strptr( e, shdr.sh_link, sym.st_name );
