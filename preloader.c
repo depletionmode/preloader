@@ -493,7 +493,7 @@ int main(int ac, char *av[])
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
-  DYNSYM *ds = get_dynsyms( fd, DYNSYM_UNRESOLVED_ONLY );
+  DYNSYM *ds = get_dynsyms( fd, DYNSYM_UNDEFINED_ONLY );
   close( fd );
 
   /* add symbols to db */
@@ -530,12 +530,11 @@ int main(int ac, char *av[])
     while( p_lib && !found ) {  /* search each lib for match */
 
       int fd_lib = open( p_lib->path, O_RDONLY );
-      DYNSYM *ds_lib = get_dynsyms( fd_lib, DYNSYM_RESOLVED_ONLY );    /* get symbols from lib */
+      DYNSYM *ds_lib = get_dynsyms( fd_lib, DYNSYM_DEFINED_ONLY );    /* get symbols from lib */
 
       DYNSYM *p_ds_lib = ds_lib;
       while( p_ds_lib ) { /* for each symbol in library */
         if( strcmp( p_ds_lib->name, p_ds->name ) == 0 ) {
-          printf( "%s:%s\n", p_ds->name, p_lib->path );
           database_link_sym_lib( d.db, p_ds->name, p_lib->path );
           found = 1;
           break;
