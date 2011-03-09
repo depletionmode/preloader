@@ -380,13 +380,13 @@ LL *database_get_sigs(DATABASE *db, int *found)
   return sigs;
 }
 
-LL *database_get_libs(DATABASE *db, int *found)
+LL *database_get_libs(DATABASE *db, int *defined)
 {
   LL *symbols = database_get_symbols( db );
 
   LL *sigs = ll_calloc();
 
-  *found = 0;
+  *defined = 0;
 
   LLIT i;
   memset( &i, 0, sizeof( LLIT ) );
@@ -397,19 +397,19 @@ LL *database_get_libs(DATABASE *db, int *found)
     int symbol_id = _getid( db, "symbols", "symbol", ptr );
     int sym_link_id = _getid( db, "sym_link", "symbol_id", itoa( symbol_id ) );
 
-    int pre = *found;
+    int pre = *defined;
     SQL_QUERY_EXEC( db->db,
                     "SELECT libs.path FROM libs INNER JOIN sym_lib_link ON sym_lib_link.lib_id=libs.id WHERE sym_lib_link.sym_link_id=%d;",
                     sym_link_id );
     SQL_QUERY_WHILE_ROW {
-      (*found)++;
+      (*defined)++;
       entry = malloc( strlen( (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) ) + 1 );
       strcpy( entry, (char *)sqlite3_column_text( SQL_QUERY_PTR, 0 ) );
       ll_add( sigs, entry );
       break;
     }
 
-    if( *found - pre == 0 ) {
+    if( *defined - pre == 0 ) {
       entry = malloc( strlen( "??" ) + 1 );
       strcpy( entry, "??" );
       ll_add( sigs, entry );

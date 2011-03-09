@@ -38,8 +38,8 @@ DYNSYM *get_dynsyms(int fd, int flags) {
 
         if( ELF32_ST_TYPE( sym.st_info ) == STT_FUNC ) { /* also good for 64-bit */
           if( flags == DYNSYM_ALL
-              || ( flags == DYNSYM_UNRESOLVED_ONLY && !sym.st_value )
-              || ( flags == DYNSYM_RESOLVED_ONLY && sym.st_value ) ) {
+              || ( flags == DYNSYM_UNDEFINED_ONLY && !sym.st_value )
+              || ( flags == DYNSYM_DEFINED_ONLY && sym.st_value ) ) {
             DYNSYM *n_ds = calloc( 1, sizeof( DYNSYM ) );
 
             char *name = elf_strptr( e, shdr.sh_link, sym.st_name );

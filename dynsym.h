@@ -8,8 +8,8 @@ struct dynsym {
   DYNSYM *nxt;
 };
 
-#define DYNSYM_UNRESOLVED_ONLY 1
-#define DYNSYM_RESOLVED_ONLY 2
+#define DYNSYM_UNDEFINED_ONLY 1
+#define DYNSYM_DEFINED_ONLY 2
 #define DYNSYM_ALL 3
 
 DYNSYM *get_dynsyms(int fd, int flags);

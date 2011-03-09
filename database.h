@@ -24,6 +24,6 @@ int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path); /* link symb
 
 LL *database_get_symbols(DATABASE *db);             /* get list of symbols */
 LL *database_get_sigs(DATABASE *db, int *found);    /* get list of signatures (count = no. symbols) */
-LL *database_get_libs(DATABASE *db, int *found);    /* get list of libs (count = no. symbols) */
+LL *database_get_libs(DATABASE *db, int *defined);  /* get list of libs (count = no. symbols) */
 
 #endif /* DATABASE_H_ */
