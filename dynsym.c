@@ -37,9 +37,9 @@ DYNSYM *get_dynsyms(int fd, int flags) {
         gelf_getsym( d, i, &sym );
 
         if( ELF32_ST_TYPE( sym.st_info ) == STT_FUNC ) { /* also good for 64-bit */
-          if( DYNSYM_ALL
-              || ( DYNSYM_UNRESOLVED_ONLY && !sym.st_value )
-              || ( DYNSYM_RESOLVED_ONLY && sym.st_value ) ) {
+          if( flags == DYNSYM_ALL
+              || ( flags == DYNSYM_UNRESOLVED_ONLY && !sym.st_value )
+              || ( flags == DYNSYM_RESOLVED_ONLY && sym.st_value ) ) {
             DYNSYM *n_ds = calloc( 1, sizeof( DYNSYM ) );
 
             char *name = elf_strptr( e, shdr.sh_link, sym.st_name );
