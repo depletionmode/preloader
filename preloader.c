@@ -34,6 +34,7 @@ enum {
   STATE_NOTIFICATION,
   STATE_PROCESSING_LIBS,
   STATE_PROCESSING_SYMS,
+  STATE_RESOLVING_SYMBOLS
 };
 
 typedef struct symbol_list {
@@ -361,6 +362,7 @@ static void _draw_display(DISPLAY *d)
   }
   case STATE_PROCESSING_SYMS:
   case STATE_PROCESSING_LIBS:
+  case STATE_RESOLVING_SYMBOLS:
   {
     static int count = 0;
     static char swirl[] = "|/-\\";
@@ -375,9 +377,10 @@ static void _draw_display(DISPLAY *d)
     attron( A_BOLD );
 
     if( *(++c) == '\0' ) c = swirl;
-    printw( "%c Processing %s %d, please be patient...",
+    printw( "%c %s %s %d, please be patient...",
             *c,
-            d->state == STATE_PROCESSING_SYMS ? "symbol" : "library",
+            d->state == STATE_RESOLVING_SYMBOLS ? "matching" : "processing",
+            d->state == STATE_PROCESSING_SYMS || STATE_RESOLVING_SYMBOLS ? "symbol" : "library",
             ++count & 0xffffff );
 
     attroff( A_BOLD );
@@ -520,11 +523,15 @@ int main(int ac, char *av[])
     p_libs = p_libs->nxt;
   }
 
+  d.state = STATE_RESOLVING_SYMBOLS;
   /* match symbols to libs */
   /* immensely inefficient, should call get_dynsyms() ONCE for each lib!! (TODO) */
   p_ds = ds;
   while( p_ds ) {   /* for each symbol in target */
     int found = 0;
+
+    d.extra = p_ds->name;
+    _draw_display( &d );
 
     LIBS *p_lib = libs;
     while( p_lib && !found ) {  /* search each lib for match */
