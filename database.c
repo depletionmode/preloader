@@ -23,7 +23,7 @@ static sqlite3_stmt *_Zstmt;
             char query[1000];                                             \
             snprintf( query, sizeof( query ) - 1, Y, ##__VA_ARGS__ );     \
             sqlite3_prepare( X, query, -1, &_Zstmt, 0 );                  \
-            /* DEBUG  printf("SQL DEBUG: %s\n", query); */                \
+            /* DEBUG */ printf("SQL DEBUG: %s\n", query);                 \
           } while( 0 )
 #define SQL_QUERY_WHILE_ROW                               \
           while( sqlite3_step( _Zstmt ) == SQLITE_ROW )
@@ -274,7 +274,7 @@ int database_add_lib(DATABASE *db, char *name, char *path)
 
   /* link lib and target */
   if( !rows ) {
-    SQL_QUERY_EXEC( db->db, "INSERT INTO sym_link ('target_id','lib_id') VALUES ('%d','%d');", db->target_id, lib_id);
+    SQL_QUERY_EXEC( db->db, "INSERT INTO lib_link ('target_id','lib_id') VALUES ('%d','%d');", db->target_id, lib_id);
     SQL_QUERY_WHILE_ROW;
     SQL_QUERY_END();
   }
@@ -284,12 +284,10 @@ int database_add_lib(DATABASE *db, char *name, char *path)
 
 int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path)
 {
-  int sym_lib_link_id;
-
   /* find sym_link_id */
   int sym_link_id;
   SQL_QUERY_EXEC( db->db,
-                  "SELECT sym_link.id FROM sym_link INNER JOIN symbols ON sym_link.symbol_id=symbols.id WHERE symbols.name='%s' AND sym_link.target_id=%d;",
+                  "SELECT sym_link.id FROM sym_link INNER JOIN symbols ON sym_link.symbol_id=symbols.id WHERE symbols.symbol='%s' AND sym_link.target_id=%d;",
                   sym,
                   db->target_id );
   SQL_QUERY_WHILE_ROW
@@ -303,8 +301,9 @@ int database_link_sym_lib(DATABASE *db, char *sym, char *lib_path)
   int lib_id;
   if( !( lib_id = _getid( db, "libs", "path", lib_path ) ) )
     return 0;
-  
+
   /* see if there is already a link */
+  int sym_lib_link_id = 0;
   SQL_QUERY_EXEC( db->db,
                   "SELECT * FROM sym_lib_link WHERE sym_link_id=%d AND lib_id=%d;",
                   sym_link_id,
