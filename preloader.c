@@ -42,14 +42,14 @@ typedef struct symbol_list {
   LL *sig;                /* ordered list of sets of function params */
   LL *lib;                /* ordered list of function linked libraries */
   int *selected;          /* list of selected items */
-  int display_offset,     /* current item as top of list to display */
+  int display_offset,     /* current item as top of list to CTX */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
       num_sigs,           /* number of found fcn sigs */
       num_libs;           /* number of found fcn linked libs */
 } SYMBOL_LIST;
 
-typedef struct display {
+typedef struct context {
   DATABASE *db;
   char filename[200];     /* target filename */
   int rows,
@@ -59,7 +59,7 @@ typedef struct display {
   SYMBOL_LIST symbols;
   int state;
   void *extra;
-} DISPLAY;
+} CTX;
 
 static char *_strip_path(char *file_path)
 {
@@ -214,7 +214,7 @@ static void _disable_display()
   endwin();
 }
 
-static char *_get_input(DISPLAY *d, char *str, char *dflt)
+static char *_get_input(CTX *ctx, char *str, char *dflt)
 {
   //TODO KEY_ESC cancelation
   static char in[1000];
@@ -223,10 +223,10 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
   noecho();
   attron( COLOR_PAIR( 2 ) );
 
-  mvchgat( d->rows - 4, 2, -1, A_INVIS, 0, NULL );
-  move( d->rows - 3, 2 );
-  for( int i = 0; i < d->cols; i++ ) addch( ' ' );
-  mvprintw( d->rows - 3, 2, "%s > ", str );
+  mvchgat( ctx->rows - 4, 2, -1, A_INVIS, 0, NULL );
+  move( ctx->rows - 3, 2 );
+  for( int i = 0; i < ctx->cols; i++ ) addch( ' ' );
+  mvprintw( ctx->rows - 3, 2, "%s > ", str );
 
   int y, x;
   getyx( stdscr, y, x );
@@ -263,7 +263,7 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
     }
 
     mvprintw( y, x, "%s", in );
-    for( int i = 0; i < d->cols - strlen( in ) - 3; i++ ) addch( ' ' );
+    for( int i = 0; i < ctx->cols - strlen( in ) - 3; i++ ) addch( ' ' );
     move( y, x + strlen( in ) );
 
   } while ( !end && ( c = getch() ) );
@@ -277,12 +277,12 @@ static char *_get_input(DISPLAY *d, char *str, char *dflt)
   return in;
 }
 
-static void _draw_display(DISPLAY *d)
+static void _draw_display(CTX *ctx)
 {
   char buf[1024];
   int len, pos_x = 0, pos_y = 0;
 
-  getmaxyx( stdscr, d->rows, d->cols );
+  getmaxyx( stdscr, ctx->rows, ctx->cols );
 
   clear();
 
@@ -291,29 +291,29 @@ static void _draw_display(DISPLAY *d)
   attron( A_BOLD );
   strcpy( buf, "  -= preloader by 2of1 =-" );
   printw( "%s", buf );
-  for( int i = 0; i < d->cols - pos_x - strlen( buf ); i++ ) addch( ' ' );
+  for( int i = 0; i < ctx->cols - pos_x - strlen( buf ); i++ ) addch( ' ' );
   attroff( A_BOLD );
   attroff( COLOR_PAIR( 6 ) );
   pos_y++;
 
   /* draw status bar */
-  move( d->rows - 1, 0 );
+  move( ctx->rows - 1, 0 );
   attron( COLOR_PAIR( 8 ) );
-  sprintf( buf, "  %s", d->filename );
+  sprintf( buf, "  %s", ctx->filename );
   attron( A_BOLD );
   printw( "%s", buf );
   attroff( A_BOLD );
   len = strlen( buf );
   sprintf( buf,
            "  [%d symbols, %d sig maches]",
-           d->symbols.count,
-           d->symbols.num_sigs );
+           ctx->symbols.count,
+           ctx->symbols.num_sigs );
   printw( "%s", buf );
   len += strlen( buf );
-  for( int i = 0; i < d->cols - pos_x - len; i++ ) addch( ' ' );;
+  for( int i = 0; i < ctx->cols - pos_x - len; i++ ) addch( ' ' );;
   attroff( COLOR_PAIR( 8 ) );
 
-  switch( d->state ) {
+  switch( ctx->state ) {
   case STATE_NORMAL:
   {
     /* draw symbols */
@@ -321,37 +321,37 @@ static void _draw_display(DISPLAY *d)
     /* print from list item ptr to end of list or num free rows (item ptr is moved up and down by up/down arrow) */
     /* format: *_if_selected function_name_bold(sig...normal) */
     pos_y = 2;
-    int list_rows = d->rows - 1 /* top */ - 3 /* bottom */;
+    int list_rows = ctx->rows - 1 /* top */ - 3 /* bottom */;
     for( int i = 0; i < list_rows; i ++ ) {
-      if( d->symbols.display_offset + i == d->symbols.count) break;
+      if( ctx->symbols.display_offset + i == ctx->symbols.count) break;
 
       move( pos_y, 2 );
 
       attron( COLOR_PAIR( 5 ) );
       attron( A_BOLD );
       printw( "%c ",
-              d->symbols.selected[d->symbols.display_offset + i] ? '*' : ' ' );
+              ctx->symbols.selected[ctx->symbols.display_offset + i] ? '*' : ' ' );
       attroff( A_BOLD );
       attroff( COLOR_PAIR( 5 ) );
 
-      if (i == d->symbols.selected_offset - d->symbols.display_offset)
+      if (i == ctx->symbols.selected_offset - ctx->symbols.display_offset)
         attron( COLOR_PAIR( 1 ) );
       else
         attron( COLOR_PAIR( 2 ) );
 
       attron( A_BOLD );
       printw( "%s ",
-              ll_access( d->symbols.func, d->symbols.display_offset + i ) );
+              ll_access( ctx->symbols.func, ctx->symbols.display_offset + i ) );
       attroff( A_BOLD );
 
       printw( "%s",
-              ll_access( d->symbols.sig, d->symbols.display_offset + i ) );
+              ll_access( ctx->symbols.sig, ctx->symbols.display_offset + i ) );
 
-      char *str = _strip_path( ll_access( d->symbols.lib,
-                               d->symbols.display_offset + i ) );
-      mvprintw( pos_y, d->cols - strlen( str ) - 4, "[%s]", str );
+      char *str = _strip_path( ll_access( ctx->symbols.lib,
+                               ctx->symbols.display_offset + i ) );
+      mvprintw( pos_y, ctx->cols - strlen( str ) - 4, "[%s]", str );
 
-      if (i == d->symbols.selected_offset - d->symbols.display_offset)
+      if (i == ctx->symbols.selected_offset - ctx->symbols.display_offset)
         attroff( COLOR_PAIR( 1 ) );
       else
         attroff( COLOR_PAIR( 2 ) );
@@ -368,8 +368,8 @@ static void _draw_display(DISPLAY *d)
     static char swirl[] = "|/-\\";
     static char *c = swirl;
 
-    if( count >> 24 != d->state ) {
-      count = d->state << 24;
+    if( count >> 24 != ctx->state ) {
+      count = ctx->state << 24;
     }
 
     move( 2, 2 );
@@ -379,13 +379,13 @@ static void _draw_display(DISPLAY *d)
     if( *(++c) == '\0' ) c = swirl;
     printw( "%c %s %s %d, please be patient...",
             *c,
-            d->state == STATE_RESOLVING_SYMBOLS ? "matching" : "processing",
-            d->state == STATE_PROCESSING_SYMS || STATE_RESOLVING_SYMBOLS ? "symbol" : "library",
+            ctx->state == STATE_RESOLVING_SYMBOLS ? "matching" : "processing",
+            ctx->state == STATE_PROCESSING_SYMS || STATE_RESOLVING_SYMBOLS ? "symbol" : "library",
             ++count & 0xffffff );
 
     attroff( A_BOLD );
 
-    printw( " (%s)", (char *)d->extra );
+    printw( " (%s)", (char *)ctx->extra );
 
     attroff( COLOR_PAIR( 2 ) );
 
@@ -408,91 +408,91 @@ static void _exec_target(char *target_path, char *params, char *lib_path)
   _init_display();
 }
 
-static void _list_scroll(DISPLAY *d, int direction, int inc)
+static void _list_scroll(CTX *ctx, int direction, int inc)
 {
 #define SCROLL_UP 0
 #define SCROLL_DOWN 1
 
   for( int i = 0; i < inc; i ++ ) {
     if( direction == SCROLL_UP ) {
-      if( !d->symbols.selected_offset-- )
-        d->symbols.selected_offset = 0;
-      if( d->symbols.selected_offset ==  d->symbols.display_offset - 1 )
-        d->symbols.display_offset--;
+      if( !ctx->symbols.selected_offset-- )
+        ctx->symbols.selected_offset = 0;
+      if( ctx->symbols.selected_offset ==  ctx->symbols.display_offset - 1 )
+        ctx->symbols.display_offset--;
     } else {
-      if( ++d->symbols.selected_offset == d->symbols.count )
-        d->symbols.selected_offset = d->symbols.count - 1;
-      if( d->symbols.selected_offset >= d->rows - 4 + d->symbols.display_offset )
-        d->symbols.display_offset++;
+      if( ++ctx->symbols.selected_offset == ctx->symbols.count )
+        ctx->symbols.selected_offset = ctx->symbols.count - 1;
+      if( ctx->symbols.selected_offset >= ctx->rows - 4 + ctx->symbols.display_offset )
+        ctx->symbols.display_offset++;
     }
   }
 }
 
-static void _parse_input(DISPLAY *d)
+static void _parse_input(CTX *ctx)
 {
   static char *params = NULL;
   int c = getch();
 
   switch( c ) {
   case KEY_UP:
-    _list_scroll( d, SCROLL_UP, 1 );
+    _list_scroll( ctx, SCROLL_UP, 1 );
     break;
   case KEY_DOWN:
-    _list_scroll( d, SCROLL_DOWN, 1 );
+    _list_scroll( ctx, SCROLL_DOWN, 1 );
     break;
   case KEY_NPAGE:
-    _list_scroll( d, SCROLL_DOWN, d->rows - 4 );
+    _list_scroll( ctx, SCROLL_DOWN, ctx->rows - 4 );
     break;
   case KEY_PPAGE:
-    _list_scroll( d, SCROLL_UP, d->rows - 4 );
+    _list_scroll( ctx, SCROLL_UP, ctx->rows - 4 );
     break;
   case '\n':  /* enter */
   {
-    char *sig = ll_access( d->symbols.sig, d->symbols.selected_offset );
-    sig = _get_input( d, "function signature", sig );
+    char *sig = ll_access( ctx->symbols.sig, ctx->symbols.selected_offset );
+    sig = _get_input( ctx, "function signature", sig );
 
     if( ( sig = _validate_sig( sig ) ) )
-      database_add_sig( d->db, (char *)ll_access( d->symbols.func, d->symbols.selected_offset ), sig );
+      database_add_sig( ctx->db, (char *)ll_access( ctx->symbols.func, ctx->symbols.selected_offset ), sig );
 
     /* refresh sig list */
-    d->symbols.sig = database_get_sigs( d->db, &d->symbols.num_sigs );
+    ctx->symbols.sig = database_get_sigs( ctx->db, &ctx->symbols.num_sigs );
   }
     break;
   case 0x20:  /* space */
     /* select symbol for ld_preloading */
     // TODO: check for sig
-    d->symbols.selected[d->symbols.selected_offset] ^= 1;
+    ctx->symbols.selected[ctx->symbols.selected_offset] ^= 1;
     break;
   case 'R':   /* enter params then execute */
   {
     char tmp[300];
-    sprintf( tmp, "'%s' args", _strip_path( d->filename ) );
-    params = _get_input( d, tmp, params );
+    sprintf( tmp, "'%s' args", _strip_path( ctx->filename ) );
+    params = _get_input( ctx, tmp, params );
   }
   case 'r':   /* execute with previous params */
-    _exec_target( d->filename, params, NULL );
+    _exec_target( ctx->filename, params, NULL );
     break;
   case 'q':
-    d->running = 0;
+    ctx->running = 0;
     break;
   }
 }
 
 int main(int ac, char *av[])
 {
-  DISPLAY d;
-  memset( &d, 0, sizeof( d ) );
+  CTX ctx;
+  memset( &ctx, 0, sizeof( ctx ) );
 
-  snprintf( d.filename,
-            sizeof( d.filename ),
+  snprintf( ctx.filename,
+            sizeof( ctx.filename ),
             "%s%s", *av[1] == '/' || *av[1] == '.' ? "" : "./",
                 av[1] );
 
   _init_display();
-  d.state = STATE_PROCESSING_SYMS;
+  ctx.state = STATE_PROCESSING_SYMS;
 
-  d.db = database_init();
-  database_add_target( d.db, d.filename ); /* add target to db */
+  ctx.db = database_init();
+  database_add_target( ctx.db, ctx.filename ); /* add target to db */
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
@@ -502,36 +502,36 @@ int main(int ac, char *av[])
   /* add symbols to db */
   DYNSYM *p_ds = ds;
   while( p_ds ) {
-    d.extra = p_ds->name;
-    _draw_display( &d );
-    database_add_symbol( d.db, p_ds->name );
+    ctx.extra = p_ds->name;
+    _draw_display( &ctx );
+    database_add_symbol( ctx.db, p_ds->name );
     p_ds = p_ds->nxt;
   }
 
-  d.state = STATE_PROCESSING_LIBS;
+  ctx.state = STATE_PROCESSING_LIBS;
 
   /* add libs to db */
   LL *lib_sym_info = ll_calloc();
 
-  LIBS *libs = get_libs(d.filename);
+  LIBS *libs = get_libs(ctx.filename);
   LIBS *p_libs = libs;
   while( p_libs ) {
-    d.extra = p_libs->path;
-    _draw_display( &d );
-    database_add_lib( d.db, p_libs->name, p_libs->path );
+    ctx.extra = p_libs->path;
+    _draw_display( &ctx );
+    database_add_lib( ctx.db, p_libs->name, p_libs->path );
 
     p_libs = p_libs->nxt;
   }
 
-  d.state = STATE_RESOLVING_SYMBOLS;
+  ctx.state = STATE_RESOLVING_SYMBOLS;
   /* match symbols to libs */
   /* immensely inefficient, should call get_dynsyms() ONCE for each lib!! (TODO) */
   p_ds = ds;
   while( p_ds ) {   /* for each symbol in target */
     int found = 0;
 
-    d.extra = p_ds->name;
-    _draw_display( &d );
+    ctx.extra = p_ds->name;
+    _draw_display( &ctx );
 
     LIBS *p_lib = libs;
     while( p_lib && !found ) {  /* search each lib for match */
@@ -542,7 +542,7 @@ int main(int ac, char *av[])
       DYNSYM *p_ds_lib = ds_lib;
       while( p_ds_lib ) { /* for each symbol in library */
         if( strcmp( p_ds_lib->name, p_ds->name ) == 0 ) {
-          database_link_sym_lib( d.db, p_ds->name, p_lib->path );
+          database_link_sym_lib( ctx.db, p_ds->name, p_lib->path );
           found = 1;
           break;
         }
@@ -566,25 +566,25 @@ int main(int ac, char *av[])
 
   // TODO iter through and free free_dynsyms( ds_lib );
 
-  _populate_symbol_list( d.db, &d.symbols );
+  _populate_symbol_list( ctx.db, &ctx.symbols );
 
-  d.state = STATE_NORMAL;
-  d.running = 1;
+  ctx.state = STATE_NORMAL;
+  ctx.running = 1;
 
-  while( d.running ) {
+  while( ctx.running ) {
     usleep(1000);
 
-    _draw_display( &d );
-    _parse_input( &d );
+    _draw_display( &ctx );
+    _parse_input( &ctx );
   }
 
   _disable_display();
 
-  database_kill( d.db );
+  database_kill( ctx.db );
 
   /* free symbol list */
-  ll_free( d.symbols.func );
-  ll_free( d.symbols.sig );
+  ll_free( ctx.symbols.func );
+  ll_free( ctx.symbols.sig );
 
   return 0;
 }
