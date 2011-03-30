@@ -14,6 +14,7 @@
 #include "exec.h"
 #include "database.h"
 #include "ll.h"
+#include "code.h"
 
 #define N_FREE(X) \
   do {            \
@@ -452,27 +453,52 @@ static void _parse_input(CTX *ctx)
   case KEY_PPAGE:
     _list_scroll( ctx, SCROLL_UP, ctx->rows - 4 );
     break;
-  case 'c':   /* compile code */
-    break;
-  case '\n':  /* edit code */
+  case '\n':  /* edit & compile code */
   {
+    char *func = ll_access( ctx->symbols.func, ctx->symbols.selected_offset );
+    char *sig = ll_access( ctx->symbols.sig, ctx->symbols.selected_offset );
+    char *lib = ll_access( ctx->symbols.lib, ctx->symbols.selected_offset );
+
     char path[500];
     sprintf( path,
              "%s/.preloader/%s.%s.c",
              getenv("HOME"),
              ctx->hash,
-             (char *)ll_access( ctx->symbols.func, ctx->symbols.selected_offset ) );
+             func );
+
+    /* check if file exists */
+    struct stat s;
+    /* populate if file doesn't exist or is empty */
+    if( stat( path, &s ) < 0 || !s.st_size ) {
+      FILE *f = fopen( path, "a" );
+      if( f ) {
+        char *code = code_gen( func, sig, _strip_path( lib ) );
+        if( code ) {
+          fwrite( code, 1, strlen( code ), f );
+          N_FREE( code );
+        }
+        fclose(f);
+      }
+    }
 
     _exec_target( "vim", path, NULL, 0 );  /* TODO: hard-coded to vim now; allow editor selection through config */
+
+    /* compile code */
+    /* if compile failed, mark entry as such */
   }
     break;
   case 's':   /* edit function signature */
   {
-    char *sig = ll_access( ctx->symbols.sig, ctx->symbols.selected_offset );
-    sig = _get_input( ctx, "function signature", sig );
+    char *sig = _get_input( ctx,
+                            "function signature",
+                            (char *)ll_access( ctx->symbols.sig,
+                                               ctx->symbols.selected_offset ) );
 
     if( ( sig = _validate_sig( sig ) ) )
-      database_add_sig( ctx->db, (char *)ll_access( ctx->symbols.func, ctx->symbols.selected_offset ), sig );
+      database_add_sig( ctx->db,
+                        (char *)ll_access( ctx->symbols.func,
+                                           ctx->symbols.selected_offset ),
+                        sig );
 
     /* refresh sig list */
     ctx->symbols.sig = database_get_sigs( ctx->db, &ctx->symbols.num_sigs );
