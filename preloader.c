@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <ncurses.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "dynsym.h"
 #include "ldd.h"
@@ -85,7 +88,7 @@ static char *_validate_sig(char *sig)
 {
   /* this function first tries to force signature to conform and failing that returns NULL */
 
-  /* this stuff is very messy - I know! */
+  /* this stuff is very messy - I know! Needs *SERIOUS* work!!!! */
 
   static char final_sig[1024];
   memset( final_sig, 0, sizeof( final_sig) );
@@ -446,7 +449,15 @@ static void _parse_input(CTX *ctx)
   case KEY_PPAGE:
     _list_scroll( ctx, SCROLL_UP, ctx->rows - 4 );
     break;
-  case '\n':  /* enter */
+  case 'c':   /* compile code */
+    break;
+  case '\n':  /* edit code */
+  {
+    char path[500] = "~/.ld";
+    _exec_target( "vim", params, NULL );  /* TODO: hard-coded to vim now; allow editor selection through config */
+  }
+    break;
+  case 's':   /* edit function signature */
   {
     char *sig = ll_access( ctx->symbols.sig, ctx->symbols.selected_offset );
     sig = _get_input( ctx, "function signature", sig );
@@ -458,8 +469,7 @@ static void _parse_input(CTX *ctx)
     ctx->symbols.sig = database_get_sigs( ctx->db, &ctx->symbols.num_sigs );
   }
     break;
-  case 0x20:  /* space */
-    /* select symbol for ld_preloading */
+  case 0x20:  /* select symbol for ld_preloading */
     // TODO: check for sig
     ctx->symbols.selected[ctx->symbols.selected_offset] ^= 1;
     break;
@@ -480,13 +490,23 @@ static void _parse_input(CTX *ctx)
 
 int main(int ac, char *av[])
 {
+  /* create .preloader directory */
+  char path[500];
+  sprintf( path, "%s/.preloader", getenv("HOME") );
+  if( mkdir( path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ) < 0 )  /* mkdir failed */
+    if( errno !=  EEXIST ) {
+      fprintf( stderr, "error: failed to create %s!\n", path );
+      exit( 0 );
+    }
+
+
   CTX ctx;
   memset( &ctx, 0, sizeof( ctx ) );
 
   snprintf( ctx.filename,
             sizeof( ctx.filename ),
             "%s%s", *av[1] == '/' || *av[1] == '.' ? "" : "./",
-                av[1] );
+            av[1] );
 
   _init_display();
   ctx.state = STATE_PROCESSING_SYMS;
