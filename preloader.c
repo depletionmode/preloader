@@ -40,11 +40,16 @@ enum {
   STATE_RESOLVING_SYMBOLS
 };
 
+enum {
+  SYMBOL_SELECTED = 1,
+  SYMBOL_INVALID
+};
+
 typedef struct symbol_list {
   LL *func;               /* ordered list of function names */
   LL *sig;                /* ordered list of sets of function params */
   LL *lib;                /* ordered list of function linked libraries */
-  int *selected;          /* list of selected items */
+  int *flags;             /* list of selected items */
   int display_offset,     /* current item as top of list to CTX */
       selected_offset,    /* the current selected item */
       count,              /* number of symbols */
@@ -182,7 +187,7 @@ static void _populate_symbol_list(DATABASE *db, SYMBOL_LIST *sl)
   sl->count = ll_size( sl->func );
   sl->sig = database_get_sigs( db, &sl->num_sigs );
   sl->lib = database_get_libs( db, &sl->num_libs );
-  sl->selected = calloc( 1, sl->count * sizeof( int ) );
+  sl->flags = calloc( 1, sl->count * sizeof( int ) );
 }
 
 static void _init_display()
@@ -225,6 +230,7 @@ static void _show_notification(CTX *ctx, char *notice)
   int pos_x = ctx->cols / 2 - strlen( notice ) / 2 - 2;
 
   attron( COLOR_PAIR( 7 ) );
+  attron( A_BOLD );
   move( pos_y++, 6 );
   for( int i = 0; i < ctx->cols - 12; i++ ) addch( ' ' );
   move( pos_y++, 6 );
@@ -232,6 +238,7 @@ static void _show_notification(CTX *ctx, char *notice)
   move( pos_y--, 6 );
   for( int i = 0; i < ctx->cols - 12; i++ ) addch( ' ' );
   mvprintw( pos_y++, pos_x, "  %s  ", notice );
+  attroff( A_BOLD );
   attroff( COLOR_PAIR( 7 ) );
 
   refresh();
@@ -355,7 +362,7 @@ static void _draw_display(CTX *ctx)
       attron( COLOR_PAIR( 5 ) );
       attron( A_BOLD );
       printw( "%c ",
-              ctx->symbols.selected[ctx->symbols.display_offset + i] ? '*' : ' ' );
+              ctx->symbols.flags[ctx->symbols.display_offset + i] & SYMBOL_SELECTED ? '*' : ' ' );
       attroff( A_BOLD );
       attroff( COLOR_PAIR( 5 ) );
 
@@ -532,8 +539,7 @@ static void _parse_input(CTX *ctx)
   }
     break;
   case 0x20:  /* select symbol for ld_preloading */
-    // TODO: check for sig
-    ctx->symbols.selected[ctx->symbols.selected_offset] ^= 1;
+    ctx->symbols.flags[ctx->symbols.selected_offset] ^= SYMBOL_SELECTED;
     break;
   case 'R':   /* enter params then execute */
   {
