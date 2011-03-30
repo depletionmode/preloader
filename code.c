@@ -52,7 +52,7 @@ endwin();
             "/* wrapper */\n"                                               \
             "%s %s%s\n{\n"                                                  \
             "%s\n"                                                          \
-            "  return o_%s%s\n"                                             \
+            "  return o_%s%s;\n"                                             \
             "}\n",  /* TODO need to remove types from call! */
             headers,
             fptr,
