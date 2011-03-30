@@ -287,7 +287,7 @@ static char *_get_input(CTX *ctx, char *str, char *dflt)
       end = 1;
       c = '\0';
     default:
-      if( strspn( (char*)&c, " ()*,.")
+      if( strspn( (char*)&c, " ()*,._")
           || BTWN( c, 0x30, 0x39 )
           || BTWN( c, 0x41, 0x5a )
           || BTWN( c, 0x61, 0x7a ) )
