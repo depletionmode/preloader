@@ -49,14 +49,13 @@ endwin();
             "\n"                                                            \
             "/* headers */\n%s\n"                                           \
             "/* ptr to orig fcn */\n%s\n"                                   \
-            "/* %s wrapper */\n"                                            \
+            "/* wrapper */\n"                                               \
             "%s %s%s\n{\n"                                                  \
             "%s\n"                                                          \
             "  return o_%s%s\n"                                             \
             "}\n",  /* TODO need to remove types from call! */
             headers,
             fptr,
-            func,
             type,
             func,
             strchr( sig + 1, '(' ),

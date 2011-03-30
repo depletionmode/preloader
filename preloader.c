@@ -35,7 +35,6 @@
 
 enum {
   STATE_NORMAL,
-  STATE_NOTIFICATION,
   STATE_PROCESSING_LIBS,
   STATE_PROCESSING_SYMS,
   STATE_RESOLVING_SYMBOLS
@@ -59,8 +58,7 @@ typedef struct context {
   char *hash;
   int rows,
       cols;
-  int running,
-      show_error;
+  int running;
   SYMBOL_LIST symbols;
   int state;
   void *extra;
@@ -219,6 +217,28 @@ static void _disable_display()
   endwin();
 }
 
+/* show notification */
+/* TODO: line wrapping */
+static void _show_notification(CTX *ctx, char *notice)
+{
+  int pos_y = ctx->rows / 2 - 1;
+  int pos_x = ctx->cols / 2 - strlen( notice ) / 2 - 2;
+
+  attron( COLOR_PAIR( 7 ) );
+  move( pos_y++, 6 );
+  for( int i = 0; i < ctx->cols - 12; i++ ) addch( ' ' );
+  move( pos_y++, 6 );
+  for( int i = 0; i < ctx->cols - 12; i++ ) addch( ' ' );
+  move( pos_y--, 6 );
+  for( int i = 0; i < ctx->cols - 12; i++ ) addch( ' ' );
+  mvprintw( pos_y++, pos_x, "  %s  ", notice );
+  attroff( COLOR_PAIR( 7 ) );
+
+  refresh();
+
+  getch();  /* wait until keypress */
+}
+
 static char *_get_input(CTX *ctx, char *str, char *dflt)
 {
   //TODO KEY_ESC cancelation
@@ -363,6 +383,7 @@ static void _draw_display(CTX *ctx)
 
       pos_y++;
     }
+
     break;
   }
   case STATE_PROCESSING_SYMS:
@@ -459,32 +480,38 @@ static void _parse_input(CTX *ctx)
     char *sig = ll_access( ctx->symbols.sig, ctx->symbols.selected_offset );
     char *lib = ll_access( ctx->symbols.lib, ctx->symbols.selected_offset );
 
-    char path[500];
-    sprintf( path,
-             "%s/.preloader/%s.%s.c",
-             getenv("HOME"),
-             ctx->hash,
-             func );
+    /* check for signature */
+    /* the assumption here is that the sig by this stage has been validated elsewhere */
+    if( memcmp( sig, "??", 2 ) != 0 ) {   /* has signature */
+      char path[500];
+      sprintf( path,
+               "%s/.preloader/%s.%s.c",
+               getenv("HOME"),
+               ctx->hash,
+               func );
 
-    /* check if file exists */
-    struct stat s;
-    /* populate if file doesn't exist or is empty */
-    if( stat( path, &s ) < 0 || !s.st_size ) {
-      FILE *f = fopen( path, "a" );
-      if( f ) {
-        char *code = code_gen( func, sig, _strip_path( lib ) );
-        if( code ) {
-          fwrite( code, 1, strlen( code ), f );
-          N_FREE( code );
+      /* check if file exists */
+      struct stat s;
+      /* populate if file doesn't exist or is empty */
+      if( stat( path, &s ) < 0 || !s.st_size ) {
+        FILE *f = fopen( path, "a" );
+        if( f ) {
+          char *code = code_gen( func, sig, _strip_path( lib ) );
+          if( code ) {
+            fwrite( code, 1, strlen( code ), f );
+            N_FREE( code );
+          }
+          fclose(f);
         }
-        fclose(f);
       }
+
+      _exec_target( "vim", path, NULL, 0 );  /* TODO: hard-coded to vim now; allow editor selection through config */
+
+      /* compile code */
+      /* if compile failed, mark entry as such */
+    } else {  /* no signature */
+      _show_notification( ctx, "Please enter a signature for this function!" );
     }
-
-    _exec_target( "vim", path, NULL, 0 );  /* TODO: hard-coded to vim now; allow editor selection through config */
-
-    /* compile code */
-    /* if compile failed, mark entry as such */
   }
     break;
   case 's':   /* edit function signature */
