@@ -55,6 +55,7 @@ typedef struct symbol_list {
 typedef struct context {
   DATABASE *db;
   char filename[200];     /* target filename */
+  char *hash;
   int rows,
       cols;
   int running,
@@ -399,14 +400,16 @@ static void _draw_display(CTX *ctx)
   refresh();
 }
 
-static void _exec_target(char *target_path, char *params, char *lib_path)
+static void _exec_target(char *target_path, char *params, char *lib_path, int wait_flag)
 {
   _disable_display();
 
   exec_target( target_path, params, lib_path );
 
-  fprintf( stderr,"\n\nPress enter to continue...\n" );
-  getchar();
+  if( wait_flag ) {
+    fprintf( stderr,"\n\nPress enter to continue...\n" );
+    getchar();
+  }
 
   _init_display();
 }
@@ -453,8 +456,14 @@ static void _parse_input(CTX *ctx)
     break;
   case '\n':  /* edit code */
   {
-    char path[500] = "~/.ld";
-    _exec_target( "vim", params, NULL );  /* TODO: hard-coded to vim now; allow editor selection through config */
+    char path[500];
+    sprintf( path,
+             "%s/.preloader/%s.%s.c",
+             getenv("HOME"),
+             ctx->hash,
+             (char *)ll_access( ctx->symbols.func, ctx->symbols.selected_offset ) );
+
+    _exec_target( "vim", path, NULL, 0 );  /* TODO: hard-coded to vim now; allow editor selection through config */
   }
     break;
   case 's':   /* edit function signature */
@@ -480,7 +489,7 @@ static void _parse_input(CTX *ctx)
     params = _get_input( ctx, tmp, params );
   }
   case 'r':   /* execute with previous params */
-    _exec_target( ctx->filename, params, NULL );
+    _exec_target( ctx->filename, params, NULL, 1 );
     break;
   case 'q':
     ctx->running = 0;
@@ -512,7 +521,7 @@ int main(int ac, char *av[])
   ctx.state = STATE_PROCESSING_SYMS;
 
   ctx.db = database_init();
-  database_add_target( ctx.db, ctx.filename ); /* add target to db */
+  ctx.hash = database_add_target( ctx.db, ctx.filename ); /* add target to db */
 
   /* get symbols from target target */
   int fd = open( av[1], O_RDONLY );
