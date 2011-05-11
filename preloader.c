@@ -524,16 +524,19 @@ static void _parse_input(CTX *ctx)
       _exec_target( "vim", path, NULL, EXEC_NOPROMPT );
 
       /* compile code */
+
+      /* remove previous object file */
       char obj_path[500];
       strncpy( obj_path, path, sizeof( obj_path )- 1 );
       obj_path[strlen( obj_path ) - 1] = '\0';
       strncat( obj_path, "o", sizeof( obj_path ) - 1);
-      /* remove previous object file */
       _exec_target( "rm -f", obj_path, NULL, EXEC_NOPROMPT );
+
+      /* compile PIC code */
       strncat( path, " -o ", sizeof( path ) - 1);
       strncat( path, obj_path, sizeof( path ) - 1);
-      /* compile PIC code */
       _exec_target( "gcc -fPIC -c", path, NULL, EXEC_NOPROMPT );
+
       /* check if object file is present */
       if( stat( obj_path, &s ) < 0 ) {
         /* compilation failed */
