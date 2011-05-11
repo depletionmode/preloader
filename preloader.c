@@ -431,13 +431,18 @@ static void _draw_display(CTX *ctx)
   refresh();
 }
 
-static void _exec_target(char *target_path, char *params, char *lib_path, int wait_flag)
+enum exec_flag {
+  EXEC_NOPROMPT = 1,
+  EXEC_PROMPT = 2
+};
+
+static void _exec_target(char *target_path, char *params, char *lib_path, int flags)
 {
   _disable_display();
 
   exec_target( target_path, params, lib_path );
 
-  if( wait_flag ) {
+  if( flags & EXEC_PROMPT ) {
     fprintf( stderr,"\n\nPress enter to continue...\n" );
     getchar();
   }
@@ -515,12 +520,32 @@ static void _parse_input(CTX *ctx)
         }
       }
 
-      _exec_target( "vim", path, NULL, 0 );  /* TODO: hard-coded to vim now; allow editor selection through config */
+      /* TODO: hard-coded to vim now; allow editor selection through config */
+      _exec_target( "vim", path, NULL, EXEC_NOPROMPT );
 
       /* compile code */
-      /* if compile failed, mark entry as such */
+      char obj_path[500];
+      strncpy( obj_path, path, sizeof( obj_path )- 1 );
+      obj_path[strlen( obj_path ) - 1] = '\0';
+      strncat( obj_path, "o", sizeof( obj_path ) - 1);
+      /* remove previous object file */
+      _exec_target( "rm -f", obj_path, NULL, EXEC_NOPROMPT );
+      strncat( path, " -o ", sizeof( path ) - 1);
+      strncat( path, obj_path, sizeof( path ) - 1);
+      /* compile PIC code */
+      _exec_target( "gcc -fPIC -c", path, NULL, EXEC_NOPROMPT );
+      /* check if object file is present */
+      if( stat( obj_path, &s ) < 0 ) {
+        /* compilation failed */
+        _exec_target( "echo", "Compilation failed! Please fix errors.", NULL, EXEC_PROMPT );
+        ctx->symbols.flags[ctx->symbols.selected_offset] |= SYMBOL_INVALID;
+        ctx->symbols.flags[ctx->symbols.selected_offset] &= ~SYMBOL_SELECTED;
+      } else {
+        /* compilation succeeded */
+        ctx->symbols.flags[ctx->symbols.selected_offset] &= ~SYMBOL_INVALID;
+      }
     } else {  /* no signature */
-      _show_notification( ctx, "Please enter a signature for this function!" );
+      _show_notification( ctx, "Please first enter a signature for this function!" );
     }
   }
     break;
@@ -541,17 +566,23 @@ static void _parse_input(CTX *ctx)
     ctx->symbols.sig = database_get_sigs( ctx->db, &ctx->symbols.num_sigs );
   }
     break;
-  case 0x20:  /* select symbol for ld_preloading */
-    ctx->symbols.flags[ctx->symbols.selected_offset] ^= SYMBOL_SELECTED;
+  case 0x20:  /* select symbol for preloading */
+    if( ctx->symbols.flags[ctx->symbols.selected_offset] & SYMBOL_INVALID ) {
+      _show_notification( ctx, "Could not compile this wrapper. Please check code!" );
+    } else {
+      ctx->symbols.flags[ctx->symbols.selected_offset] ^= SYMBOL_SELECTED;
+    }
     break;
-  case 'R':   /* enter params then execute */
+  case 'r':   /* enter params then execute */
+    /* todo: check if function with invalid code is selected */
   {
     char tmp[300];
     sprintf( tmp, "'%s' args", _strip_path( ctx->filename ) );
     params = _get_input( ctx, tmp, params );
   }
-  case 'r':   /* execute with previous params */
-    _exec_target( ctx->filename, params, NULL, 1 );
+  case 'R':   /* execute with previous params */
+    /* todo: check if function with invalid code is selected */
+    _exec_target( ctx->filename, params, NULL, EXEC_PROMPT );
     break;
   case 'q':
     ctx->running = 0;

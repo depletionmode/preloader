@@ -8,8 +8,6 @@
 
 char *code_gen( char *func, char *sig, char *lib )
 {
-  clear();
-endwin();
   /* default headers */
   char headers[] = "#include <stdio.h>\n"       \
                    "#include <stdlib.h>\n"      \
