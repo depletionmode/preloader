@@ -337,9 +337,11 @@ static void _draw_display(CTX *ctx)
   attroff( A_BOLD );
   len = strlen( buf );
   sprintf( buf,
-           "  [%d symbols, %d sig maches]",
+           "  [%d symbol%s, %d sig match%s]",
            ctx->symbols.count,
-           ctx->symbols.num_sigs );
+           ctx->symbols.count > 1 ? "s" : "",
+           ctx->symbols.num_sigs,
+           ctx->symbols.num_sigs > 1 ? "es" : "" );
   printw( "%s", buf );
   len += strlen( buf );
   for( int i = 0; i < ctx->cols - pos_x - len; i++ ) addch( ' ' );;
@@ -492,9 +494,10 @@ static void _parse_input(CTX *ctx)
     if( memcmp( sig, "??", 2 ) != 0 ) {   /* has signature */
       char path[500];
       sprintf( path,
-               "%s/.preloader/%s.%s.c",
+               "%s/.preloader/%s-%s.%s.c",
                getenv("HOME"),
                ctx->hash,
+               _strip_path( ctx->filename ),
                func );
 
       /* check if file exists */
